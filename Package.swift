@@ -1,9 +1,9 @@
-// swift-tools-version:5.5
+// swift-tools-version:5.6
 
 import PackageDescription
 
 let package = Package(
-  name: "cocoa-combine-navigation",
+  name: "combine-cocoa-navigation",
   platforms: [
     .iOS(.v13),
     .macOS(.v11),
@@ -18,17 +18,14 @@ let package = Package(
   ],
   dependencies: [
     .package(
-      name: "cocoa-aliases",
       url: "https://github.com/capturecontext/cocoa-aliases.git",
       .upToNextMajor(from: "2.0.4")
     ),
     .package(
-      name: "swift-foundation-extensions",
       url: "https://github.com/capturecontext/swift-foundation-extensions.git",
-      .branch("main")
+      branch: "main"
     ),
     .package(
-      name: "combine-extensions",
       url: "https://github.com/capturecontext/combine-extensions.git",
       .upToNextMinor(from: "0.0.3")
     ),

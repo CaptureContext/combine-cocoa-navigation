@@ -11,12 +11,16 @@ fileprivate extension Cancellable {
 }
 
 extension CocoaViewController {
-  public func configureRoutes<
+  var __dismissCancellables: Set<AnyCancellable> {
+    set { setAssociatedObject(newValue, forKey: #function) }
+    get { getAssociatedObject(forKey: #function).or([]) }
+  }
+
+  public func configureRoute<
     P: Publisher,
     Route: ExpressibleByNilLiteral & Hashable
   >(
     for publisher: P,
-    dismissCancellable: Reference<Cancellable?>,
     onDismiss: @escaping () -> Void
   ) -> Cancellable where P.Output == Route, P.Failure == Never {
     publisher
@@ -26,15 +30,15 @@ extension CocoaViewController {
         guard let self = self else { return }
         
         let destination = self
-          .__erasedRouteConfigurations
+          .erasedRouteConfigurations
           .first { $0.target == AnyHashable(route) }
           .map { $0.getController }
         
         self.navigate(
           to: destination,
-          beforePush: {
+          beforePush: { controller in
             self.configureNavigationDismiss(onDismiss)
-              .store(in: &dismissCancellable.wrappedValue)
+              .store(in: &controller.__dismissCancellables)
           }
         )
       }
@@ -42,11 +46,10 @@ extension CocoaViewController {
   
   public func configureRoutes<
     P: Publisher,
-    Route: ExpressibleByNilLiteral & Equatable
+    Route: ExpressibleByNilLiteral & Hashable
   >(
     for publisher: P,
-    _ configurations: [RouteConfiguration<Route>],
-    dismissCancellable: Reference<Cancellable?>,
+    routes: [RouteConfiguration<Route>],
     onDismiss: @escaping () -> Void
   ) -> Cancellable where P.Output == Route, P.Failure == Never {
     publisher
@@ -54,21 +57,21 @@ extension CocoaViewController {
       .receive(on: UIScheduler.shared)
       .sink { [weak self] route in
         guard let self = self else { return }
-        let destination = configurations
+        let destination = routes
           .first { $0.target == route }
           .map { $0.getController }
           .or(
             self
-              .__erasedRouteConfigurations
+              .erasedRouteConfigurations
               .first { $0.target == AnyHashable(route) }
               .map { $0.getController }
           )
           
         self.navigate(
           to: destination,
-          beforePush: {
+          beforePush: { controller in
             self.configureNavigationDismiss(onDismiss)
-              .store(in: &dismissCancellable.wrappedValue)
+              .store(in: &controller.__dismissCancellables)
           }
         )
       }
@@ -76,7 +79,7 @@ extension CocoaViewController {
   
   private func navigate(
     to destination: (() -> CocoaViewController)?,
-    beforePush: () -> Void
+    beforePush: (CocoaViewController) -> Void
   ) {
     guard let navigationController = self.navigationController
     else { return }
@@ -99,7 +102,7 @@ extension CocoaViewController {
         }
       }
       
-      beforePush()
+      beforePush(controller)
       navigationController.pushViewController(controller, animated: true)
     }
   }
