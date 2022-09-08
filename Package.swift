@@ -23,7 +23,7 @@ let package = Package(
     ),
     .package(
       url: "https://github.com/capturecontext/swift-foundation-extensions.git",
-      branch: "main"
+      .upToNextMinor(from: "0.1.0")
     ),
     .package(
       url: "https://github.com/capturecontext/combine-extensions.git",
