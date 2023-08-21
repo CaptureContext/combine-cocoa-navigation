@@ -1,4 +1,4 @@
-// swift-tools-version:5.6
+// swift-tools-version:5.8
 
 import PackageDescription
 
@@ -19,15 +19,15 @@ let package = Package(
   dependencies: [
     .package(
       url: "https://github.com/capturecontext/cocoa-aliases.git",
-      .upToNextMajor(from: "2.0.4")
+      .upToNextMajor(from: "2.0.5")
     ),
     .package(
       url: "https://github.com/capturecontext/swift-foundation-extensions.git",
-      .upToNextMinor(from: "0.1.0")
+      .upToNextMinor(from: "0.2.0")
     ),
     .package(
       url: "https://github.com/capturecontext/combine-extensions.git",
-      .upToNextMinor(from: "0.0.3")
+      .upToNextMinor(from: "0.1.0")
     ),
   ],
   targets: [

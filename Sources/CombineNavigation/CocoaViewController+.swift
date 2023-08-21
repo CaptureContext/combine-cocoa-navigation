@@ -21,7 +21,7 @@ extension CocoaViewController {
     Route: ExpressibleByNilLiteral & Hashable
   >(
     for publisher: P,
-    onDismiss: @escaping () -> Void
+    onDismiss: @escaping () -> Void = {}
   ) -> Cancellable where P.Output == Route, P.Failure == Never {
     publisher
       .removeDuplicates()
@@ -50,7 +50,7 @@ extension CocoaViewController {
   >(
     for publisher: P,
     routes: [RouteConfiguration<Route>],
-    onDismiss: @escaping () -> Void
+    onDismiss: @escaping () -> Void = {}
   ) -> Cancellable where P.Output == Route, P.Failure == Never {
     publisher
       .removeDuplicates()
