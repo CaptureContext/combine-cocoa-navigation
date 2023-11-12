@@ -1,22 +1,34 @@
 # combine-cocoa-navigation
 
-[![SwiftPM 5.8](https://img.shields.io/badge/swiftpm-5.8-ED523F.svg?style=flat)](https://swift.org/download/) ! [![@maximkrouk](https://img.shields.io/badge/contact-@capturecontext-1DA1F2.svg?style=flat&logo=twitter)](https://twitter.com/capture_context) 
+[![SwiftPM 5.9](https://img.shields.io/badge/swiftpm-5.9-ED523F.svg?style=flat)](https://github.com/CaptureContext/swift-declarative-configuration/actions/workflows/Test.yml) ![Platforms](https://img.shields.io/badge/platforms-iOS_13_|_macOS_11_|_tvOS_13_|_watchOS_6_|_Catalyst_13-ED523F.svg?style=flat) [![@capture_context](https://img.shields.io/badge/contact-@capture__context-1DA1F2.svg?style=flat&logo=twitter)](https://twitter.com/capture_context) 
+
+> This readme is draft and the branch is still an `alpha` version
 
 ## Usage
 
-Basically all you need is to call `configureRoutes` method of the viewController, it accepts routing publisher and routeConfigurations, your code may look somewhat like this:
+This library was primarely created for [TCA](https://github.com/pointfreeco/swift-composable-archtiecture) navigation with Cocoa. However it's geneic enough to use with pure combine. But to dive more into general understanding of stack-based and tree based navigation take a look at TCA docs.
+
+### Tree-based navigation
+
+Basically all you need is to call `navigationDestination` method of the viewController, it accepts routing publisher and mapping of the route to the destination controller. Your code may look somewhat like this:
 
 ```swift
+enum MyFeatureRoute {
+  case details
+}
+
 final class MyViewController: UIViewController {
   // ...
   
   func bindViewModel() {
-    configureRoutes(
+    navigationDestination(
       for viewModel.publisher(for: \.state.route),
-      routes: [
-        // Provide mapping from route to controller
-        .associate(makeDetailsController, with: .details)
-      ],
+      switch: { [unowned self] route in
+        switch route {
+        case .details:
+          makeDetailsController()
+        }
+      },
       onDismiss: { 
         // Update state on dismiss
         viewModel.send(.dismiss)
@@ -25,6 +37,78 @@ final class MyViewController: UIViewController {
   }
 }
 ```
+
+or
+
+```swift
+enum MyFeatureState {
+  // ...
+  var details: DetailsState?
+}
+
+final class MyViewController: UIViewController {
+  // ...
+  
+  func bindViewModel() {
+    navigationDestination(
+      "my_feature_details"
+      isPresented: viewModel.publisher(for: \.state.detais.isNotNil),
+      controller: { [unowned self] in makeDetailsController() },
+      onDismiss: capture { $0.viewModel.send(.dismiss) }
+    ).store(in: &cancellables)
+  }
+}
+```
+
+### Stack-based navigation
+
+Basically all you need is to call `navigationStack` method of the viewController, it accepts routing publisher and mapping of the route to the destination controller. Your code may look somewhat like this:
+
+```swift
+enum MyFeatureState {
+  enum DestinationState {
+    case featureA(FeatureAState)
+    case featureB(FeatureBState)
+  }
+  // ...
+  var navigationStack: [DestinationState]
+}
+
+final class MyViewController: UIViewController {
+  // ...
+  
+  func bindViewModel() {
+    navigationStack(
+      for viewModel.publisher(for: \.state.navigationStack),
+      switch: { [unowned self] route in
+        switch route {
+        case .featureA:
+          makeFeatureAController()
+        case .featureB:
+          makeFeatureBController()
+        }
+      },
+      onDismiss: capture { _self, _ in
+        _self.viewModel.send(.dismiss)
+      }
+    ).store(in: &cancellables)
+  }
+}
+```
+
+### Notes and good practices
+
+- One controller should not manage navigation stack and navigation tree
+- Routing controller's parent should be navigationController
+- Tips above will prevent you from making logical errors
+
+## Coming soon
+
+- Rich example
+- Readme update
+- Docc documentation
+- Presentation helpers
+- Tests (maybe 🤡)
 
 ## Installation
 
@@ -43,7 +127,7 @@ If you use SwiftPM for your project, you can add CombineNavigation to your packa
 ```swift
 .package(
   url: "https://github.com/capturecontext/combine-cocoa-navigation.git", 
-  .upToNextMinor(from: "0.2.0")
+  branch: "navigation-stacks"
 )
 ```
 
@@ -54,7 +138,9 @@ Do not forget about target dependencies:
   name: "CombineNavigation", 
   package: "combine-cocoa-navigation"
 )
+```
 
 ## License
 
 This package is released under the MIT license. See [LICENSE](./LICENSE) for details.
+
