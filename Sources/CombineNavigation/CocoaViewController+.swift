@@ -14,7 +14,7 @@ extension CocoaViewController {
 		C: Collection & Equatable,
 		Route: Hashable
 	>(
-		for publisher: P,
+		_ publisher: P,
 		switch controller: @escaping (Route) -> UIViewController,
 		onDismiss: @escaping (Route) -> Void
 	) -> Cancellable where
@@ -40,7 +40,7 @@ extension CocoaViewController {
 		IDs: Collection & Equatable,
 		Route
 	>(
-		for publisher: P,
+		_ publisher: P,
 		ids: @escaping (Stack) -> IDs,
 		route: @escaping (Stack, IDs.Element) -> Route?,
 		switch controller: @escaping (Route) -> UIViewController,
@@ -91,7 +91,7 @@ extension CocoaViewController {
 
 	public func navigationDestination<P: Publisher>(
 		_ publisher: P,
-		switch controller: @escaping (P.Output) -> CocoaViewController,
+		switch controller: @escaping (P.Output) -> CocoaViewController?,
 		onDismiss: @escaping () -> Void
 	) -> AnyCancellable where
 		P.Output: Hashable & ExpressibleByNilLiteral,
@@ -122,8 +122,9 @@ extension CocoaViewController {
 		for navigation: UINavigationController
 	) -> [CocoaViewController] {
 		__navigationStack.flatMap { route in
-			let controller = controller(for: route, in: navigation)
-			return [controller] + controller.navigationStackControllers(for: navigation)
+			controller(for: route, in: navigation).map { controller in
+				[controller] + controller.navigationStackControllers(for: navigation)
+			}.or([])
 		}
 	}
 }
@@ -137,16 +138,19 @@ extension CocoaViewController {
 	fileprivate func controller(
 		for route: NavigationRoute,
 		in navigation: UINavigationController
-	) -> CocoaViewController {
-		let controller = route.controller()
-		navigation
-			.dismissPublisher(for: controller)
-			.sinkValues(capture { _self in
-				_self.__dismissCancellables.removeValue(forKey: route.id)
-				return route.onDismiss()
-			})
-			.store(for: route.id, in: &__dismissCancellables)
-		return controller
+	) -> CocoaViewController? {
+		return route.controller().map { controller in
+			navigation
+				.dismissPublisher(for: controller)
+				.sinkValues(capture { _self in
+					_self.__dismissCancellables
+						.removeValue(forKey: route.id)?
+						.cancel()
+					return route.onDismiss()
+				})
+				.store(for: route.id, in: &__dismissCancellables)
+			return controller
+		}
 	}
 }
 

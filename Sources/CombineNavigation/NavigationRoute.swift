@@ -13,12 +13,12 @@ struct NavigationRoute: Hashable, Equatable, Identifiable {
 	}
 
 	let id: AnyHashable
-	let controller: () -> CocoaViewController
+	let controller: () -> CocoaViewController?
 	let onDismiss: () -> Void
 
 	init(
 		id: AnyHashable,
-		controller: @escaping () -> CocoaViewController,
+		controller: @escaping () -> CocoaViewController?,
 		onDismiss: @escaping () -> Void
 	) {
 		self.id = id

@@ -52,11 +52,13 @@ extension UINavigationController {
 		// managed navigation stack
 		let suffix = controller.navigationStackControllers(for: self)
 
+		let navigationStack = prefix + [navigationStackPointer] + suffix
+
 		// setViewControllers updates navigation stack with
 		// valid push/pop animation, unmanaged controllers are thrown away
 		setViewControllers(
-			prefix + [navigationStackPointer] + suffix,
-			animated: true
+			navigationStack,
+			animated: NavigationAnimation.$enabled.get()
 		)
 	}
 }

@@ -1,6 +1,16 @@
 // swift-tools-version: 5.9
 
 import PackageDescription
+import CompilerPluginSupport
+
+#warning("TODO: Add rich example")
+// The example is WIP, it's a simple twitter-like app
+// but already has examples for Tree-based and recursive Tree-based
+// navigation. Stack-based navigation is planned
+//
+// Do not forget to add it to repo before publishing a release ^^
+
+#warning("TODO: Add docc and publish it on SPI")
 
 let package = Package(
 	name: "combine-cocoa-navigation",
@@ -32,13 +42,22 @@ let package = Package(
 		),
 		.package(
 			url: "https://github.com/capturecontext/swift-foundation-extensions.git",
-			.upToNextMinor(from: "0.3.3")
+			.upToNextMinor(from: "0.3.4")
 		),
+		.package(
+			url: "https://github.com/stackotter/swift-macro-toolkit.git",
+			.upToNextMinor(from: "0.3.0")
+		),
+		.package(
+			url: "https://github.com/pointfreeco/swift-macro-testing.git",
+			.upToNextMinor(from: "0.2.0")
+		)
 	],
 	targets: [
 		.target(
 			name: "CombineNavigation",
 			dependencies: [
+				.target(name: "CombineNavigationMacros"),
 				.product(
 					name: "Capture",
 					package: "swift-capture"
@@ -56,6 +75,28 @@ let package = Package(
 					package: "swift-foundation-extensions"
 				),
 			]
-		)
+		),
+		.macro(
+			name: "CombineNavigationMacros",
+			dependencies: [
+				.product(
+					name: "MacroToolkit",
+					package: "swift-macro-toolkit"
+				)
+			]
+		),
+		.testTarget(
+			name: "CombineNavigationTests",
+			dependencies: [
+				.target(name: "CombineNavigation")
+			]
+		),
+		.testTarget(
+			name: "CombineNavigationMacrosTests",
+			dependencies: [
+				.target(name: "CombineNavigationMacros"),
+				.product(name: "MacroTesting", package: "swift-macro-testing"),
+			]
+		),
 	]
 )
