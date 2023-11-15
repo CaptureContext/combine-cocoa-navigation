@@ -3,6 +3,14 @@ import CocoaAliases
 import FoundationExtensions
 import Combine
 
+struct NavigationRouteIndexedID<
+	Route: Hashable,
+	Index: Hashable
+>: Hashable {
+	let route: Route
+	let index: Index
+}
+
 struct NavigationRoute: Hashable, Equatable, Identifiable {
 	static func == (lhs: Self, rhs: Self) -> Bool {
 		lhs.id == rhs.id
@@ -13,17 +21,15 @@ struct NavigationRoute: Hashable, Equatable, Identifiable {
 	}
 
 	let id: AnyHashable
+	var controllerID: ObjectIdentifier?
 	let controller: () -> CocoaViewController?
-	let onDismiss: () -> Void
 
 	init(
 		id: AnyHashable,
-		controller: @escaping () -> CocoaViewController?,
-		onDismiss: @escaping () -> Void
+		controller: @escaping () -> CocoaViewController?
 	) {
 		self.id = id
 		self.controller = controller
-		self.onDismiss = onDismiss
 	}
 }
 #endif

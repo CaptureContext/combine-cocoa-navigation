@@ -1,28 +1,18 @@
+#if canImport(UIKit) && !os(watchOS)
 import CocoaAliases
-import CombineNavigationMacros
 
-@attached(
-	extension,
-	conformances: RoutingControllerProtocol,
-	names: named(Destinations), named(_makeDestinations())
-)
-public macro RoutingController() = #externalMacro(
-	module: "CombineNavigationMacros",
-	type: "RoutingControllerMacro"
-)
-
-public protocol RoutingControllerProtocol: CocoaViewController {
+public protocol RoutingController: CocoaViewController {
 	associatedtype Destinations
 	func _makeDestinations() -> Destinations
 }
 
-extension RoutingControllerProtocol {
-	private static func _mapNavigationDestinations<Route, Output>(
+extension RoutingController {
+	private static func _mapNavigationDestinations<each Arg, Output>(
 		_ destinations: Destinations,
-		_ mapping: @escaping (Destinations, Route) -> Output
-	) -> (Route) -> Output {
-		return { route in
-			mapping(destinations, route)
+		_ mapping: @escaping (Destinations, repeat each Arg) -> Output
+	) -> (repeat each Arg) -> Output {
+		return { (arg: repeat each Arg) in
+			mapping(destinations, repeat each arg)
 		}
 	}
 
@@ -44,4 +34,14 @@ extension RoutingControllerProtocol {
 			mapping
 		)
 	}
+
+	public func destinations<Route>(
+		_ mapping: @escaping (Destinations, Route, Int) -> CocoaViewController
+	) -> (Route, Int) -> CocoaViewController {
+		Self._mapNavigationDestinations(
+			_makeDestinations(),
+			mapping
+		)
+	}
 }
+#endif

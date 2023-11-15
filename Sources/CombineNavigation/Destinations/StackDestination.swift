@@ -4,11 +4,19 @@ import CocoaAliases
 import Combine
 import FoundationExtensions
 
+/// Wrapper for creating and accessing managed navigation stack controllers
 @propertyWrapper
-open class Destination<Controller: CocoaViewController>: Weakifiable {
-	private weak var _controller: Controller?
-	public var wrappedValue: Controller? { _controller }
-	public var projectedValue: Destination<Controller> { self }
+open class StackDestination<
+	StackElementID: Hashable,
+	Controller: CocoaViewController
+>: Weakifiable {
+	private var _controllers: [StackElementID: Weak<Controller>] = [:]
+	public var wrappedValue: [StackElementID: Controller] {
+		let controllers = _controllers.compactMapValues(\.wrappedValue)
+		_controllers = controllers.mapValues(Weak.init(wrappedValue:))
+		return controllers
+	}
+	public var projectedValue: StackDestination<StackElementID, Controller> { self }
 
 	private var _initControllerOverride: (() -> Controller)?
 
@@ -39,19 +47,19 @@ open class Destination<Controller: CocoaViewController>: Weakifiable {
 	///
 	/// Default implementation is suitable for most controllers, however if you have a controller which
 	/// doesn't have a custom init you'll have to use this method or if you have a base controller that
-	/// requires custom init it'll be beneficial for you to create a custom subclass of Destination
+	/// requires custom init it'll be beneficial for you to create a custom subclass of StackDestination
 	/// and override it's `initController` class method, you can find an example in tests.
 	convenience init(_ initControllerOverride: @escaping () -> Controller) {
 		self.init()
 		self._initControllerOverride = initControllerOverride
 	}
 
-	/// Returns wrappedValue if present, intializes and configures a new instance otherwise
-	public func callAsFunction() -> Controller {
-		wrappedValue ?? {
+	/// Returns `wrappedValue[id]` if present, intializes and configures a new instance otherwise
+	public subscript(_ id: StackElementID) -> Controller {
+		return wrappedValue[id] ?? {
 			let controller = _initControllerOverride?() ?? Self.initController()
 			configureController(controller)
-			_controller = controller
+			_controllers[id] = Weak(controller)
 			return controller
 		}()
 	}

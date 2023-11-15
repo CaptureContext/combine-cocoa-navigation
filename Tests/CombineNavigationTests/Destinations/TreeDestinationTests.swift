@@ -3,39 +3,39 @@ import CocoaAliases
 @_spi(Internals) @testable import CombineNavigation
 
 #if canImport(UIKit) && !os(watchOS)
-final class DestinationTests: XCTestCase {
+final class TreeDestinationTests: XCTestCase {
 	func testMain() {
-		@Destination
-		var basic: CustomViewController?
+		@TreeDestination
+		var sut: CustomViewController?
 
-		@Destination({ .init(value: 1) })
-		var configuredBasic: CustomViewController?
+		@TreeDestination({ .init(value: 1) })
+		var configuredSUT: CustomViewController?
 
-		XCTAssertEqual(_basic().value, 0)
-		XCTAssertEqual(_configuredBasic().value, 1)
+		XCTAssertEqual(_sut().value, 0)
+		XCTAssertEqual(_configuredSUT().value, 1)
 
-		XCTAssertEqual(_basic().isConfiguredByCustomNavigationChild, false)
-		XCTAssertEqual(_configuredBasic().isConfiguredByCustomNavigationChild, false)
+		XCTAssertEqual(_sut().isConfiguredByCustomNavigationChild, false)
+		XCTAssertEqual(_configuredSUT().isConfiguredByCustomNavigationChild, false)
 	}
 
 	func testInheritance() {
-		@CustomDestination
-		var custom: CustomViewController?
+		@CustomTreeDestination
+		var sut: CustomViewController?
 
-		@CustomDestination({ .init(value: 2) })
-		var configuredCustom: CustomViewController?
+		@CustomTreeDestination({ .init(value: 2) })
+		var configuredSUT: CustomViewController?
 
-		XCTAssertEqual(_custom().value, 1)
-		XCTAssertEqual(_configuredCustom().value, 2)
+		XCTAssertEqual(_sut().value, 1)
+		XCTAssertEqual(_configuredSUT().value, 2)
 
-		XCTAssertEqual(_custom().isConfiguredByCustomNavigationChild, true)
-		XCTAssertEqual(_configuredCustom().isConfiguredByCustomNavigationChild, true)
-
-		// Should compile to pass the test
-		_custom.customNavigationChildSpecificMethod()
+		XCTAssertEqual(_sut().isConfiguredByCustomNavigationChild, true)
+		XCTAssertEqual(_configuredSUT().isConfiguredByCustomNavigationChild, true)
 
 		// Should compile to pass the test
-		$custom.customNavigationChildSpecificMethod()
+		_sut.customNavigationChildSpecificMethod()
+
+		// Should compile to pass the test
+		$sut.customNavigationChildSpecificMethod()
 	}
 }
 
@@ -58,9 +58,9 @@ fileprivate class CustomViewController: CocoaViewController {
 }
 
 @propertyWrapper
-fileprivate final class CustomDestination<Controller: CustomViewController>: Destination<Controller> {
+fileprivate final class CustomTreeDestination<Controller: CustomViewController>: TreeDestination<Controller> {
 	override var wrappedValue: Controller? { super.wrappedValue }
-	override var projectedValue: CustomDestination<Controller> { super.projectedValue as! Self }
+	override var projectedValue: CustomTreeDestination<Controller> { super.projectedValue as! Self }
 
 	func customNavigationChildSpecificMethod() { }
 

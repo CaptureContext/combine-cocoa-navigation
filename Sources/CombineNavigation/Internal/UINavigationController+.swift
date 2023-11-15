@@ -5,26 +5,21 @@ import Combine
 import FoundationExtensions
 
 extension UINavigationController {
-	internal func dismissPublisher(for controller: CocoaViewController) -> some Publisher<Void, Never> {
-		let controllerID = controller.objectID
+	internal func dismissPublisher() -> some Publisher<Void, Never> {
 		return Publishers.Merge3(
-			publisher(for: #selector(UINavigationController.popViewController)),
-			publisher(for: #selector(UINavigationController.popToViewController)),
-			publisher(for: #selector(UINavigationController.popToRootViewController))
+			publisher(for: #selector(UINavigationController.popViewController)).map { print("pop") },
+			publisher(for: #selector(UINavigationController.popToViewController)).map { print("popTo") },
+			publisher(for: #selector(UINavigationController.popToRootViewController)).map { print("popToRoot") }
 		)
 		.flatMap { [weak self] in Future<Bool, Never> { promise in
 			guard let self else { return promise(.success(false)) }
 
-			func controllerIsNotInStack() -> Bool {
-				!self.viewControllers.contains { $0.objectID == controllerID }
-			}
-
 			guard let transitionCoordinator = self.transitionCoordinator
-			else { return promise(.success(controllerIsNotInStack())) } // Handle programmatic pop
+			else { return promise(.success(true)) } // Handle non-interactive pop
 
 			// Handle interactive pop if not cancelled
 			transitionCoordinator.animate(alongsideTransition: nil) { context in
-				promise(.success(!context.isCancelled && controllerIsNotInStack()))
+				promise(.success(context.isCancelled))
 			}
 		}}
 		.filter { $0 }
@@ -58,7 +53,7 @@ extension UINavigationController {
 		// valid push/pop animation, unmanaged controllers are thrown away
 		setViewControllers(
 			navigationStack,
-			animated: NavigationAnimation.$enabled.get()
+			animated: NavigationAnimation.$isEnabled.get()
 		)
 	}
 }

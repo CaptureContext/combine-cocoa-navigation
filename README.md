@@ -2,7 +2,7 @@
 
 [![SwiftPM 5.9](https://img.shields.io/badge/swiftpm-5.9-ED523F.svg?style=flat)](https://github.com/CaptureContext/swift-declarative-configuration/actions/workflows/Test.yml) ![Platforms](https://img.shields.io/badge/platforms-iOS_13_|_macOS_11_|_tvOS_13_|_watchOS_6_|_Catalyst_13-ED523F.svg?style=flat) [![@capture_context](https://img.shields.io/badge/contact-@capture__context-1DA1F2.svg?style=flat&logo=twitter)](https://twitter.com/capture_context) 
 
-> This readme is draft and the branch is still an `alpha` version
+> This readme is draft and the branch is still an `beta` version untill all [todos](#Coming soon) are resolved.
 
 ## Usage
 
@@ -17,21 +17,22 @@ enum MyFeatureRoute {
   case details
 }
 
+@RoutingController
 final class MyViewController: UIViewController {
-  // ...
-  
+  @TreeDestination
+  var detailsController: DetailsViewController?
+
   func bindViewModel() {
     navigationDestination(
-      for viewModel.publisher(for: \.state.route),
-      switch: { [unowned self] route in
+      viewModel.publisher(for: \.state.route),
+      switch: destinations { destinations, route in
         switch route {
         case .details:
-          makeDetailsController()
+          destinations.$detailsController()
         }
       },
-      onDismiss: { 
-        // Update state on dismiss
-        viewModel.send(.dismiss)
+      onDismiss: capture { _self in 
+        _self.viewModel.send(.dismiss)
       }
     ).store(in: &cancellables)
   }
@@ -47,13 +48,14 @@ enum MyFeatureState {
 }
 
 final class MyViewController: UIViewController {
-  // ...
+  @TreeDestination
+  var detailsController: DetailsViewController?
   
   func bindViewModel() {
     navigationDestination(
       "my_feature_details"
       isPresented: viewModel.publisher(for: \.state.detais.isNotNil),
-      controller: { [unowned self] in makeDetailsController() },
+      controller: destinations { $0.$detailsController() },
       onDismiss: capture { $0.viewModel.send(.dismiss) }
     ).store(in: &cancellables)
   }
@@ -71,25 +73,31 @@ enum MyFeatureState {
     case featureB(FeatureBState)
   }
   // ...
-  var navigationStack: [DestinationState]
+  var path: [DestinationState]
 }
 
 final class MyViewController: UIViewController {
-  // ...
+  @StackDestination
+  var featureAControllers: [Int: FeatureAController]
+  
+  @StackDestination
+  var featureBControllers: [Int: FeatureBController]
   
   func bindViewModel() {
     navigationStack(
-      for viewModel.publisher(for: \.state.navigationStack),
-      switch: { [unowned self] route in
+      viewModel.publisher(for: \.state.path),
+      switch: destinations { destinations, route, index in
         switch route {
         case .featureA:
-          makeFeatureAController()
+          destinations.$featureAControllers[index]
         case .featureB:
-          makeFeatureBController()
+          destinations.$featureBControllers[index]
         }
       },
-      onDismiss: capture { _self, _ in
-        _self.viewModel.send(.dismiss)
+      onDismiss: capture { _self, indices in
+        // can be handled like `state.path.remove(atOffsets: IndexSet(indices))`
+        // should remove all requested indices before publishing an update
+        _self.viewModel.send(.dismiss(indices))
       }
     ).store(in: &cancellables)
   }
@@ -99,16 +107,18 @@ final class MyViewController: UIViewController {
 ### Notes and good practices
 
 - One controller should not manage navigation stack and navigation tree
+  
+  > The logic behind collecting controllers navigation stack uses same storage for `navigationStack`s and `navigationDestination`s, so it should not cause any crashes, but it will break the logic
 - Routing controller's parent should be navigationController
-- Tips above will prevent you from making logical errors
+
+  > It's just generally a good practice, but the package handles this corner case and everything should work fine
 
 ## Coming soon
 
 - Rich example
 - Readme update
-- Docc documentation
 - Presentation helpers
-- Tests (maybe 🤡)
+- There are a few compiler todos to resolve
 
 ## Installation
 

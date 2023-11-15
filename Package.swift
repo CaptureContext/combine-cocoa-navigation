@@ -6,11 +6,9 @@ import CompilerPluginSupport
 #warning("TODO: Add rich example")
 // The example is WIP, it's a simple twitter-like app
 // but already has examples for Tree-based and recursive Tree-based
-// navigation. Stack-based navigation is planned
+// navigation. Stack-based navigation and basic deeplinking is planned
 //
 // Do not forget to add it to repo before publishing a release ^^
-
-#warning("TODO: Add docc and publish it on SPI")
 
 let package = Package(
 	name: "combine-cocoa-navigation",
@@ -51,7 +49,11 @@ let package = Package(
 		.package(
 			url: "https://github.com/pointfreeco/swift-macro-testing.git",
 			.upToNextMinor(from: "0.2.0")
-		)
+		),
+		.package(
+			url: "https://github.com/apple/swift-docc-plugin.git",
+			.upToNextMajor(from: "1.3.0")
+		),
 	],
 	targets: [
 		.target(
