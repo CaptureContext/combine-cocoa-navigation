@@ -109,7 +109,7 @@ extension UINavigationController {
 
 extension UINavigationController {
 	// Runs once in app lifetime
-	private static let swizzle: Void = {
+	internal static let swizzle: Void = {
 		objc_exchangeImplementations(
 			#selector(popViewController(animated:)),
 			#selector(__swizzledPopViewController)
@@ -130,13 +130,6 @@ extension UINavigationController {
 			#selector(__swizzledSetViewControllers)
 		)
 	}()
-
-	// Swizzle automatically when the first
-	// navigationController loads it's view
-	open override func loadView() {
-		UINavigationController.swizzle
-		super.viewDidLoad()
-	}
 
 	@objc dynamic func __swizzledPopViewController(
 		animated: Bool

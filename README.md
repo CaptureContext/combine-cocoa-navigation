@@ -10,6 +10,28 @@
 
 This library was primarely created for [TCA](https://github.com/pointfreeco/swift-composable-archtiecture) navigation with Cocoa. However it's geneic enough to use with pure combine. But to dive more into general understanding of stack-based and tree based navigation take a look at TCA docs.
 
+### Setup
+
+It's **extremely important** to call `bootstrap()` function in the beginning of your app's lifecycle to perform required swizzling for enabling `UINavigationController.popPublisher()`
+
+```swift
+import UIKit
+import CombineNavigation
+
+@main
+class AppDelegate: UIResponder, UIApplicationDelegate {
+  func application(
+    _ application: UIApplication,
+    didFinishLaunchingWithOptions launchOptions: [
+      UIApplication.LaunchOptionsKey: Any
+    ]?
+  ) -> Bool {
+    CombineNavigation.bootstrap()
+    return true
+  }
+}
+```
+
 ### Tree-based navigation
 
 Basically all you need is to call `navigationDestination` method of the viewController, it accepts routing publisher and mapping of the route to the destination controller. Your code may look somewhat like this:
