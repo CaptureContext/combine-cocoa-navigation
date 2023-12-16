@@ -12,7 +12,7 @@ jobs:
       !contains(github.event.head_commit.message, '[ci skip]') &&
       !contains(github.event.head_commit.message, '[ci skip test]') &&
       !contains(github.event.head_commit.message, '[ci skip test_macos]')
-    runs-on: macOS-12
+    runs-on: macOS-13
     timeout-minutes: 30
     steps:
     - uses: actions/checkout@v3
