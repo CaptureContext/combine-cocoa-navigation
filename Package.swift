@@ -3,13 +3,6 @@
 import PackageDescription
 import CompilerPluginSupport
 
-#warning("TODO: Add rich example")
-// The example is WIP, it's a simple twitter-like app
-// but already has examples for Tree-based and recursive Tree-based
-// navigation. Stack-based navigation and basic deeplinking is planned
-//
-// Do not forget to add it to repo before publishing a release ^^
-
 let package = Package(
 	name: "combine-cocoa-navigation",
 	platforms: [
