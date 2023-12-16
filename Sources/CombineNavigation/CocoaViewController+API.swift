@@ -17,7 +17,7 @@ extension CocoaViewController {
 	>(
 		_ publisher: P,
 		switch controller: @escaping (Route, C.Index) -> CocoaViewController,
-		onDismiss: @escaping (Set<C.Index>) -> Void
+		onPop: @escaping ([C.Index]) -> Void
 	) -> Cancellable where
 		P.Output == C,
 		P.Failure == Never,
@@ -25,12 +25,10 @@ extension CocoaViewController {
 		C.Index: Hashable,
 		C.Indices: Equatable
 	{
-		navigationStack(
+		combineNavigationRouter.navigationStack(
 			publisher,
-			ids: \.indices,
-			route: { ($0[$1], $1) },
 			switch: controller,
-			onDismiss: onDismiss
+			onPop: onPop
 		)
 	}
 
@@ -44,31 +42,20 @@ extension CocoaViewController {
 		_ publisher: P,
 		ids: @escaping (Stack) -> IDs,
 		route: @escaping (Stack, IDs.Element) -> Route?,
-		switch controller: @escaping (Route) -> CocoaViewController,
-		onDismiss: @escaping (Set<IDs.Element>) -> Void
+		switch controller: @escaping (Route, IDs.Element) -> CocoaViewController,
+		onPop: @escaping ([IDs.Element]) -> Void
 	) -> Cancellable where
 		P.Output == Stack,
 		P.Failure == Never,
 		IDs.Element: Hashable
 	{
-		publisher
-			.sinkValues(capture { _self, stack in
-				_self.updateNavigationStack(
-					ids(stack).compactMap { id in
-						route(stack, id).map { route in
-							.init(
-								id: id,
-								controller: { controller(route) }
-							)
-						}
-					},
-					onDismiss: _self.capture { _self in
-						onDismiss(Set(
-							_self.routesToDismiss().compactMap { $0.id as? IDs.Element }
-						))
-					}
-				)
-			})
+		combineNavigationRouter.navigationStack(
+			publisher,
+			ids: ids,
+			route: route,
+			switch: controller,
+			onPop: onPop
+		)
 	}
 }
 
@@ -80,49 +67,34 @@ extension CocoaViewController {
 		_ id: AnyHashable,
 		isPresented publisher: P,
 		controller: @escaping () -> CocoaViewController,
-		onDismiss: @escaping () -> Void
+		onPop: @escaping () -> Void
 	) -> AnyCancellable where
 		P.Output == Bool,
 		P.Failure == Never
 	{
-		navigationDestination(
-			publisher.map { isPresented in
-				isPresented ? id : nil
-			},
-			switch: { id in
-				id.map { _ in controller() }
-			},
-			onDismiss: {
-				onDismiss()
-			}
+		combineNavigationRouter.navigationDestination(
+			id,
+			isPresented: publisher,
+			controller: controller,
+			onPop: onPop
 		)
 	}
 
 	/// Subscribes on publisher of navigation destination state
-	public func navigationDestination<P: Publisher>(
+	public func navigationDestination<P: Publisher, Route>(
 		_ publisher: P,
-		switch controller: @escaping (P.Output) -> CocoaViewController?,
-		onDismiss: @escaping () -> Void
+		switch controller: @escaping (Route) -> CocoaViewController,
+		onPop: @escaping () -> Void
 	) -> AnyCancellable where
-		P.Output: Hashable & ExpressibleByNilLiteral,
+		Route: Hashable,
+		P.Output == Route?,
 		P.Failure == Never
 	{
-		publisher
-			.sinkValues(capture { _self, route in
-				_self.updateNavigationStack(
-					route == nil ? [] : [
-						NavigationRoute(
-							id: route,
-							controller: { controller(route) }
-						)
-					],
-					onDismiss: { [weak self] in
-						guard let self, self.routesToDismiss().contains(where: { $0.id == route as AnyHashable })
-						else { return }
-						onDismiss()
-					}
-				)
-			})
+		combineNavigationRouter.navigationDestination(
+			publisher,
+			switch: controller,
+			onPop: onPop
+		)
 	}
 }
 #endif

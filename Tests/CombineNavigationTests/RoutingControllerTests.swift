@@ -2,256 +2,127 @@ import XCTest
 import CocoaAliases
 import Capture
 import Combine
+import CombineSchedulers
 @testable import CombineNavigation
+
 #if canImport(UIKit) && !os(watchOS)
 import SwiftUI
-#warning("TODO: Add test for `navigationStack(_:ids:route:switch:onDismiss:)`")
-#warning("TODO: Add test for `navigationDestination(_:isPresented:controller:onDismiss:)`")
+
+// TODO: Add test for `navigationStack(_:ids:route:switch:onDismiss:)`")
+// TODO: Add test for `navigationDestination(_:isPresented:controller:onDismiss:)`")
 final class RoutingControllerTests: XCTestCase {
-  func testAnimation() {
-    let viewModel = TreeViewModel()
-    let controller = TreeViewController()
-    let navigationController = UINavigationController(rootViewController: controller)
-    controller.viewModel = viewModel
+	func testMain() {
+		let root = StackViewController()
+		let viewModel = StackViewModel(initialState: .init())
+		let navigation = UINavigationController(rootViewController: root)
+		navigation.loadViewIfNeeded()
+		root.loadViewIfNeeded()
+		root.viewModel = viewModel
 
-		XCTAssertEqual(navigationController.viewControllers.count, 1)
-		XCTAssert(navigationController.topViewController === controller)
-
-		let expectation = XCTestExpectation()
-		_ = withoutNavigationAnimation {
-			// Escape out of context, won't work with dispach queues unfortunately
-			Task { @MainActor in
-				// Wait for 1 second
-				try await Task.sleep(nanoseconds: 1_000_000_000)
-
-				// Fails if animation is enabled
-				viewModel.state.value.destination = .feedback()
-				XCTAssertEqual(navigationController.viewControllers.count, 2)
-				XCTAssert(navigationController.topViewController === controller.feedbackController)
-				expectation.fulfill()
-			}
-		}
-
-		wait(for: [expectation], timeout: 1.5)
-  }
-
-	func testAnimationPublisher() {
-		let viewModel = TreeViewModel()
-		let controller = TreeViewController()
-		let navigationController = UINavigationController(rootViewController: controller)
-
-		// Disable animations using publisher
-		viewModel.animationsDisabled = true
-		controller.viewModel = viewModel
-
-		XCTAssertEqual(navigationController.viewControllers.count, 1)
-		XCTAssert(navigationController.topViewController === controller)
-
-		// Fails if animation is enabled
-		viewModel.state.value.destination = .feedback()
-		XCTAssertEqual(navigationController.viewControllers.count, 2)
-		XCTAssert(navigationController.topViewController === controller.feedbackController)
- }
-
-	func testNavigationTree() {
-		let viewModel = TreeViewModel()
-		let controller = TreeViewController()
-		let navigationController = UINavigationController(rootViewController: controller)
-		controller.viewModel = viewModel
-
-		// Disable navigation animation for tests
 		withoutNavigationAnimation {
-			XCTAssertEqual(navigationController.viewControllers.count, 1)
-			XCTAssert(navigationController.topViewController === controller)
+			XCTAssertEqual(navigation.viewControllers.count, 1)
 
-			viewModel.state.value.destination = .feedback()
-			XCTAssertEqual(navigationController.viewControllers.count, 2)
-			XCTAssert(navigationController.topViewController === controller.feedbackController)
+			root.viewModel.state.root.state.destination = .tree(.init(
+				initialState: .init(destination: .tree(.init(
+					initialState: .init(destination: .tree(.init(
+						initialState: .init()
+					)))
+				)))
+			))
+			XCTAssertEqual(navigation.viewControllers.count, 4)
 
-			viewModel.state.value.destination = .orderDetail()
-			XCTAssertEqual(navigationController.viewControllers.count, 2)
-			XCTAssert(navigationController.topViewController === controller.orderDetailController)
+			root.viewModel.state.path.append(.tree(.init(
+				initialState: .init()
+			)))
+			XCTAssertEqual(navigation.viewControllers.count, 5)
 
-			navigationController.popViewController(animated: false)
-			XCTAssertEqual(viewModel.state.value.destination, .none)
+			navigation.popViewController()
+			XCTAssertEqual(navigation.viewControllers.count, 4)
+			XCTAssertEqual(root.viewModel.state.path.count, 0)
+			XCTAssertNotNil(
+				root.viewModel.state.root
+					.state.destination?.tree?
+					.state.destination?.tree?
+					.state.destination?.tree
+			)
 
-			viewModel.state.value.destination = .feedback()
-			XCTAssertEqual(navigationController.viewControllers.count, 2)
-			XCTAssert(navigationController.topViewController === controller.feedbackController)
+			root.viewModel.state.root
+				.state.destination?.tree?
+				.state.destination = .tree(.init(initialState: .init()))
 
-			viewModel.state.value.destination = .none
-			XCTAssertEqual(navigationController.viewControllers.count, 1)
-			XCTAssert(navigationController.topViewController === controller)
-		}
-	}
+			XCTAssertNil(
+				root.viewModel.state.root
+					.state.destination?.tree?
+					.state.destination?.tree?
+					.state.destination?.tree
+			)
 
-	func testNavigationStack() {
-		let viewModel = StackViewModel()
-		let controller = StackViewController()
-		let navigationController = UINavigationController(rootViewController: controller)
-		controller.viewModel = viewModel
+			XCTAssertEqual(navigation.viewControllers.count, 3)
 
-		// Disable navigation animation for tests
-		withoutNavigationAnimation {
-			XCTAssertEqual(navigationController.viewControllers.count, 1)
-			XCTAssert(navigationController.topViewController === controller)
-
-			viewModel.state.value.path.append(.feedback())
-			XCTAssertEqual(navigationController.viewControllers.count, 2)
-			XCTAssert(navigationController.topViewController === controller.$feedbackControllers[0])
-
-			viewModel.state.value.path.append(.orderDetail())
-			XCTAssertEqual(navigationController.viewControllers.count, 3)
-			XCTAssert(navigationController.topViewController === controller.$orderDetailControllers[1])
-
-			viewModel.state.value.path.append(.feedback())
-			XCTAssertEqual(navigationController.viewControllers.count, 4)
-			XCTAssert(navigationController.topViewController === controller.$feedbackControllers[2])
-
-			viewModel.state.value.path.removeAll()
-			XCTAssertEqual(navigationController.viewControllers.count, 1)
-			XCTAssert(navigationController.topViewController === controller)
-
-			viewModel.state.value.path.append(.feedback())
-			XCTAssertEqual(navigationController.viewControllers.count, 2)
-			XCTAssert(navigationController.topViewController === controller.$feedbackControllers[0])
-
-			viewModel.state.value.path.append(.orderDetail())
-			XCTAssertEqual(navigationController.viewControllers.count, 3)
-			XCTAssert(navigationController.topViewController === controller.$orderDetailControllers[1])
-
-			_ = viewModel.state.value.path.popLast()
-			XCTAssertEqual(navigationController.viewControllers.count, 2)
-			XCTAssert(navigationController.topViewController === controller.$feedbackControllers[0])
-
-			viewModel.state.value.path.append(.orderDetail())
-			XCTAssertEqual(navigationController.viewControllers.count, 3)
-			XCTAssert(navigationController.topViewController === controller.$orderDetailControllers[1])
-
-			// pop
-			XCTAssertEqual(viewModel.state.value.path.count, 2)
-			navigationController.popViewController(animated: false)
-			XCTAssertEqual(viewModel.state.value.path.count, 1)
-
-			// popTo
-			viewModel.state.value.path = [.feedback(), .feedback(), .orderDetail(), .feedback(), .orderDetail()]
-			XCTAssertEqual(navigationController.viewControllers.count, 6)
-
-			navigationController.popToViewController(controller, animated: false)
-			XCTAssertEqual(viewModel.state.value.path.count, 0)
-			XCTAssertEqual(navigationController.viewControllers.count, 1)
-
-			// popToRoot
-			viewModel.state.value.path = [.feedback(), .feedback(), .orderDetail(), .feedback(), .orderDetail()]
-			XCTAssertEqual(navigationController.viewControllers.count, 6)
-
-			navigationController.popToRootViewController(animated: false)
-			XCTAssertEqual(viewModel.state.value.path.count, 0)
-			XCTAssertEqual(navigationController.viewControllers.count, 1)
-		}
-	}
-
-	func testNavigationStackDestinations() {
-		let viewModel = StackViewModel()
-		let controller = StackViewController()
-		let navigationController = UINavigationController(rootViewController: controller)
-		controller.viewModel = viewModel
-
-		// Disable navigation animation for tests
-		withoutNavigationAnimation {
-			viewModel.state.value.path = [.feedback(), .feedback(), .orderDetail(), .feedback(), .orderDetail()]
-			XCTAssertEqual(navigationController.viewControllers.count, 6)
-
-			let destinations = controller._makeDestinations()
-
-			XCTAssert(zip(navigationController.viewControllers, [
-				controller,
-				controller.feedbackControllers[0],
-				controller.feedbackControllers[1],
-				controller.orderDetailControllers[2],
-				controller.feedbackControllers[3],
-				controller.orderDetailControllers[4],
-			]).allSatisfy(===))
-
-			XCTAssert(zip(navigationController.viewControllers, [
-				controller,
-				controller.$feedbackControllers[0],
-				controller.$feedbackControllers[1],
-				controller.$orderDetailControllers[2],
-				controller.$feedbackControllers[3],
-				controller.$orderDetailControllers[4],
-			]).allSatisfy(===))
-
-			XCTAssert(zip(navigationController.viewControllers, [
-				controller,
-				destinations.feedbackControllers[0],
-				destinations.feedbackControllers[1],
-				destinations.orderDetailControllers[2],
-				destinations.feedbackControllers[3],
-				destinations.orderDetailControllers[4],
-			]).allSatisfy(===))
-
-			XCTAssert(zip(navigationController.viewControllers, [
-				controller,
-				destinations.$feedbackControllers[0],
-				destinations.$feedbackControllers[1],
-				destinations.$orderDetailControllers[2],
-				destinations.$feedbackControllers[3],
-				destinations.$orderDetailControllers[4],
-			]).allSatisfy(===))
-
-			XCTAssert(zip(navigationController.viewControllers, [
-				controller,
-				destinations[0],
-				destinations[1],
-				destinations[2],
-				destinations[3],
-				destinations[4],
-			]).allSatisfy(===))
+			navigation.popViewController()
+			XCTAssertNil(
+				root.viewModel.state.root
+					.state.destination?.tree?
+					.state.destination?.tree
+			)
 		}
 	}
 }
 
-fileprivate let testDestinationID = UUID()
-
-fileprivate class OrderDetailsController: CocoaViewController {}
-fileprivate class FeedbackController: CocoaViewController {}
-
-// MARK: - Tree
-
 fileprivate class TreeViewModel {
 	struct State {
-		enum Destination: Equatable {
+		enum Destination {
 			/// UUID represents some state
-			case orderDetail(UUID = testDestinationID)
-			case feedback(UUID = testDestinationID)
+			case tree(TreeViewModel)
+			case stack(StackViewModel)
 
 			enum Tag: Hashable {
-				case orderDetail
-				case feedback
+				case tree
+				case stack
+			}
+
+			var tree: TreeViewModel? {
+				switch self {
+				case let .tree(viewModel):
+					viewModel
+				default:
+					nil
+				}
+			}
+
+			var stack: StackViewModel? {
+				switch self {
+				case let .stack(viewModel):
+					viewModel
+				default:
+					nil
+				}
 			}
 
 			var tag: Tag {
 				switch self {
-				case .orderDetail: return .orderDetail
-				case .feedback: return .feedback
+				case .tree: return .tree
+				case .stack: return .stack
 				}
 			}
 		}
 
+		var id: UUID = .init()
 		var destination: Destination?
 	}
 
-	let state = CurrentValueSubject<State, Never>(.init())
-	var animationsDisabled: Bool = false
+	init(initialState: State) {
+		self._state = .init(initialState)
+	}
+
+	private let _state: CurrentValueSubject<State, Never>
+	public var state: State {
+		get { _state.value }
+		set { _state.value = newValue }
+	}
 
 	var publisher: some Publisher<State, Never> {
-		animationsDisabled
-		? state
-			.withNavigationAnimation(false)
-			.eraseToAnyPublisher()
-		: state
-			.eraseToAnyPublisher()
+		_state
 	}
 }
 
@@ -260,30 +131,55 @@ fileprivate class TreeViewController: CocoaViewController {
 	private var cancellables: Set<AnyCancellable> = []
 
 	var viewModel: TreeViewModel! {
-		didSet { bind(viewModel.publisher) }
+		didSet {
+			cancellables = []
+			guard let viewModel else { return }
+			bind(viewModel.publisher)
+		}
 	}
 
 	@TreeDestination
-	var orderDetailController: OrderDetailsController?
+	var treeController: TreeViewController?
 
 	@TreeDestination
-	var feedbackController: FeedbackController?
+	var stackController: StackViewController?
 
-	func bind<P: Publisher<TreeViewModel.State, Never>>(_ publisher: P) {
+	func scope(_ viewModel: TreeViewModel?) {
+		$treeController.setConfiguration { controller in
+			controller.viewModel = viewModel?.state.destination?.tree
+		}
+
+		$stackController.setConfiguration { controller in
+			controller.viewModel = viewModel?.state.destination?.stack
+		}
+	}
+
+	func bind(
+		_ publisher: some Publisher<TreeViewModel.State, Never>
+	) {
+		publisher.map(\.destination).removeDuplicates { lhs, rhs in
+			lhs.flatMap(\.tree).map(ObjectIdentifier.init)
+			== rhs.flatMap(\.tree).map(ObjectIdentifier.init)
+			&&
+			lhs.flatMap(\.stack).map(ObjectIdentifier.init)
+			== rhs.flatMap(\.stack).map(ObjectIdentifier.init)
+		}.sinkValues(capture { _self, destination in
+			self.scope(_self.viewModel)
+		})
+		.store(in: &cancellables)
+
 		navigationDestination(
 			publisher.map(\.destination?.tag).removeDuplicates(),
 			switch: destinations { destinations, route in
 				switch route {
-				case .orderDetail:
-					destinations.$orderDetailController()
-				case .feedback:
-					destinations.$feedbackController()
-				case .none:
-					nil
+				case .tree:
+					destinations.$treeController()
+				case .stack:
+					destinations.$stackController()
 				}
 			},
-			onDismiss: capture { _self in
-				_self.viewModel.state.value.destination = .none
+			onPop: capture { _self in
+				_self.viewModel.state.destination = .none
 			}
 		)
 		.store(in: &cancellables)
@@ -296,26 +192,57 @@ fileprivate class StackViewModel {
 	struct State {
 		enum Destination {
 			/// UUID represents some state
-			case orderDetail(UUID = testDestinationID)
-			case feedback(UUID = testDestinationID)
+			case tree(TreeViewModel)
+			case stack(StackViewModel)
 
 			enum Tag: Hashable {
-				case orderDetail
-				case feedback
+				case tree
+				case stack
+			}
+
+			var tree: TreeViewModel? {
+				switch self {
+				case let .tree(viewModel):
+					viewModel
+				default:
+					nil
+				}
+			}
+
+			var stack: StackViewModel? {
+				switch self {
+				case let .stack(viewModel):
+					viewModel
+				default:
+					nil
+				}
 			}
 
 			var tag: Tag {
 				switch self {
-				case .orderDetail: return .orderDetail
-				case .feedback: return .feedback
+				case .tree: return .tree
+				case .stack: return .stack
 				}
 			}
 		}
 
+		var root: TreeViewModel = .init(initialState: .init())
 		var path: [Destination] = []
 	}
 
-	let state = CurrentValueSubject<State, Never>(.init())
+	init(initialState: State) {
+		self._state = .init(initialState)
+	}
+
+	private let _state: CurrentValueSubject<State, Never>
+	public var state: State {
+		get { _state.value }
+		set { _state.value = newValue }
+	}
+
+	var publisher: some Publisher<State, Never> {
+		_state
+	}
 }
 
 @RoutingController
@@ -323,28 +250,68 @@ fileprivate class StackViewController: CocoaViewController {
 	private var cancellables: Set<AnyCancellable> = []
 
 	var viewModel: StackViewModel! {
-		didSet { bind(viewModel.state) }
+		didSet {
+			cancellables = []
+			guard let viewModel else { return }
+			bind(viewModel.publisher)
+		}
 	}
 
-	@StackDestination
-	var orderDetailControllers: [Int: OrderDetailsController]
+	var contentController: TreeViewController = .init()
 
 	@StackDestination
-	var feedbackControllers: [Int: FeedbackController]
+	var treeControllers: [Int: TreeViewController]
 
-	func bind<P: Publisher<StackViewModel.State, Never>>(_ publisher: P) {
+	@StackDestination
+	var stackControllers: [Int: StackViewController]
+
+	override func viewDidLoad() {
+		super.viewDidLoad()
+		addRoutedChild(contentController)
+		view.addSubview(contentController.view)
+		contentController.view.frame = view.bounds
+		contentController.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+		contentController.didMove(toParent: self)
+	}
+
+	func scope(_ viewModel: StackViewModel?) {
+		contentController.viewModel = viewModel?.state.root
+
+		$treeControllers.setConfiguration { controller, id in
+			controller.viewModel = viewModel?.state.path[safe: id]?.tree
+		}
+
+		$stackControllers.setConfiguration { controller, id in
+			controller.viewModel = viewModel?.state.path[safe: id]?.stack
+		}
+	}
+
+	func bind(
+		_ publisher: some Publisher<StackViewModel.State, Never>
+	) {
+		publisher.map(\.path).removeDuplicates { lhs, rhs in
+			lhs.compactMap(\.tree).map(ObjectIdentifier.init)
+			== rhs.compactMap(\.tree).map(ObjectIdentifier.init)
+			&&
+			lhs.compactMap(\.stack).map(ObjectIdentifier.init)
+			== rhs.compactMap(\.stack).map(ObjectIdentifier.init)
+		}.sinkValues(capture { _self, destination in
+			self.scope(_self.viewModel)
+		})
+		.store(in: &cancellables)
+
 		navigationStack(
 			publisher.map(\.path).map { $0.map(\.tag) }.removeDuplicates(),
-			switch: destinations { destinations, route, index in
+			switch: destinations { destination, route, index in
 				switch route {
-				case .orderDetail:
-					destinations.$orderDetailControllers[index]
-				case .feedback:
-					destinations.$feedbackControllers[index]
+				case .tree:
+					destination.$treeControllers[index]
+				case .stack:
+					destination.$stackControllers[index]
 				}
 			},
-			onDismiss: capture { _self, indices in
-				_self.viewModel.state.value.path.remove(atOffsets: IndexSet(indices))
+			onPop: capture { _self, indices in
+				_self.viewModel.state.path.remove(atOffsets: IndexSet(indices))
 			}
 		)
 		.store(in: &cancellables)

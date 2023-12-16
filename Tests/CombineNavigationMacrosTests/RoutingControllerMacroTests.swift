@@ -77,7 +77,7 @@ final class RoutingControllerMacroTests: XCTestCase {
 			    /// Use in `navigationDestination`/`navigationStack` methods to map
 			    /// routes to specific destinations using `destinations` method
 			    public struct Destinations {
-			    	public subscript(_ id: some Hashable) -> CocoaViewController? {
+			    	public subscript(_ id: some Hashable) -> UIViewController? {
 			    		return nil
 			    	}
 			    }
@@ -124,7 +124,7 @@ final class RoutingControllerMacroTests: XCTestCase {
 					@TreeDestination
 					var secondDetailController: CocoaViewController?
 
-					public subscript(_ id: some Hashable) -> CocoaViewController? {
+					public subscript(_ id: some Hashable) -> UIViewController? {
 						return nil
 					}
 				}
@@ -174,7 +174,7 @@ final class RoutingControllerMacroTests: XCTestCase {
 					@StackDestination
 					var secondDetailController: [Int: CocoaViewController]
 
-					public subscript(_ id: Int) -> CocoaViewController? {
+					public subscript(_ id: Int) -> UIViewController? {
 						return firstDetailController[id]
 						?? secondDetailController[id]
 					}
@@ -248,7 +248,7 @@ final class RoutingControllerMacroTests: XCTestCase {
 					@CustomDestination
 					var secondDetailController: CocoaViewController?
 
-					public subscript(_ id: some Hashable) -> CocoaViewController? {
+					public subscript(_ id: some Hashable) -> UIViewController? {
 						return nil
 					}
 				}

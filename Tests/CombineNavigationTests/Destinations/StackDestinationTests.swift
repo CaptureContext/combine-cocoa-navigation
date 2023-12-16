@@ -8,7 +8,7 @@ final class StackDestinationTests: XCTestCase {
 		@StackDestination
 		var sut: [AnyHashable: CustomViewController]
 
-		@StackDestination({ .init(value: 1) })
+		@StackDestination({ _ in .init(value: 1) })
 		var configuredSUT: [AnyHashable: CustomViewController]
 
 		var mergedNavigationStack: [CustomViewController] = []
@@ -66,7 +66,7 @@ final class StackDestinationTests: XCTestCase {
 		@CustomStackDestination
 		var sut: [AnyHashable: CustomViewController]
 
-		@CustomStackDestination({ .init(value: 2) })
+		@CustomStackDestination({ _ in .init(value: 2) })
 		var configuredSUT: [AnyHashable: CustomViewController]
 
 		XCTAssertEqual(_sut[0].value, 1)
@@ -123,7 +123,10 @@ fileprivate final class CustomStackDestination<
 	///
 	/// `CombineNavigation` should be imported as `@_spi(Internal) import`
 	/// to override this declaration
-	override func configureController(_ controller: Controller) {
+	override func configureController(
+		_ controller: Controller,
+		for id: StackElementID
+	) {
 		controller.isConfiguredByCustomNavigationChild = true
 	}
 
@@ -133,7 +136,9 @@ fileprivate final class CustomStackDestination<
 	///
 	/// `CombineNavigation` should be imported as `@_spi(Internal) import`
 	/// to override this declaration
-	override class func initController() -> Controller {
+	override class func initController(
+		for id: StackElementID
+	) -> Controller {
 		.init(value: 1)
 	}
 }

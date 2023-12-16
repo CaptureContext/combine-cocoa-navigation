@@ -40,7 +40,7 @@ let package = Package(
 		),
 		.package(
 			url: "https://github.com/capturecontext/swift-foundation-extensions.git",
-			.upToNextMinor(from: "0.3.4")
+			.upToNextMinor(from: "0.4.0")
 		),
 		.package(
 			url: "https://github.com/stackotter/swift-macro-toolkit.git",

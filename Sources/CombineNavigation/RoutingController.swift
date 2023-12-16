@@ -25,19 +25,9 @@ extension RoutingController {
 		)
 	}
 
-	public func destinations<Route>(
-		_ mapping: @escaping (Destinations, Route) -> CocoaViewController?
-	) -> (Route) -> CocoaViewController?
-	where Route: ExpressibleByNilLiteral {
-		Self._mapNavigationDestinations(
-			_makeDestinations(),
-			mapping
-		)
-	}
-
-	public func destinations<Route>(
-		_ mapping: @escaping (Destinations, Route, Int) -> CocoaViewController
-	) -> (Route, Int) -> CocoaViewController {
+	public func destinations<Route, ID: Hashable>(
+		_ mapping: @escaping (Destinations, Route, ID) -> CocoaViewController
+	) -> (Route, ID) -> CocoaViewController {
 		Self._mapNavigationDestinations(
 			_makeDestinations(),
 			mapping

@@ -12,7 +12,9 @@ open class TreeDestination<Controller: CocoaViewController>: Weakifiable {
 	public var projectedValue: TreeDestination<Controller> { self }
 	
 	private var _initControllerOverride: (() -> Controller)?
-	
+
+	private var _configuration: ((Controller) -> Void)?
+
 	/// Sets instance-specific override for creating a new controller
 	///
 	/// This override has the highest priority when creating a new controller
@@ -23,7 +25,17 @@ open class TreeDestination<Controller: CocoaViewController>: Weakifiable {
 	) {
 		_initControllerOverride = closure
 	}
-	
+
+	/// Sets instance-specific configuration for controllers
+	public func setConfiguration(
+		_ closure: ((Controller) -> Void)?
+	) {
+		_configuration = closure
+		closure.map { configure in
+			wrappedValue.map(configure)
+		}
+	}
+
 	@_spi(Internals) public class func initController() -> Controller {
 		return Controller()
 	}
@@ -42,19 +54,21 @@ open class TreeDestination<Controller: CocoaViewController>: Weakifiable {
 	/// doesn't have a custom init you'll have to use this method or if you have a base controller that
 	/// requires custom init it'll be beneficial for you to create a custom subclass of TreeDestination
 	/// and override it's `initController` class method, you can find an example in tests.
-	convenience init(_ initControllerOverride: @escaping () -> Controller) {
+	public convenience init(_ initControllerOverride: @escaping () -> Controller) {
 		self.init()
-		self._initControllerOverride = initControllerOverride
+		self.overrideInitController(with: initControllerOverride)
 	}
 	
 	/// Returns wrappedValue if present, intializes and configures a new instance otherwise
 	public func callAsFunction() -> Controller {
-		wrappedValue ?? {
+		let controller = wrappedValue ?? {
 			let controller = _initControllerOverride?() ?? Self.initController()
 			configureController(controller)
-			_controller = controller
+			_configuration?(controller)
+			self._controller = controller
 			return controller
 		}()
+		return controller
 	}
 }
 #endif

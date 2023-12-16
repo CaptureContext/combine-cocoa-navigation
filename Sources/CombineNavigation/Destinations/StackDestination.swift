@@ -18,7 +18,9 @@ open class StackDestination<
 	}
 	public var projectedValue: StackDestination<StackElementID, Controller> { self }
 
-	private var _initControllerOverride: (() -> Controller)?
+	private var _initControllerOverride: ((StackElementID) -> Controller)?
+
+	private var _configuration: ((Controller, StackElementID) -> Void)?
 
 	/// Sets instance-specific override for creating a new controller
 	///
@@ -26,16 +28,33 @@ open class StackDestination<
 	///
 	/// To disable isntance-specific override pass `nil` to this method
 	public func overrideInitController(
-		with closure: (() -> Controller)?
+		with closure: ((StackElementID) -> Controller)?
 	) {
 		_initControllerOverride = closure
 	}
 
-	@_spi(Internals) public class func initController() -> Controller {
+	/// Sets instance-specific configuration for controllers
+	public func setConfiguration(
+		_ closure: ((Controller, StackElementID) -> Void)?
+	) {
+		_configuration = closure
+		closure.map { configure in
+			wrappedValue.forEach { id, controller in
+				configure(controller, id)
+			}
+		}
+	}
+
+	@_spi(Internals) public class func initController(
+		for id: StackElementID
+	) -> Controller {
 		return Controller()
 	}
 
-	@_spi(Internals) open func configureController(_ controller: Controller) {}
+	@_spi(Internals) open func configureController(
+		_ controller: Controller,
+		for id: StackElementID
+	) {}
 
 	/// Creates a new instance
 	public init() {}
@@ -49,19 +68,22 @@ open class StackDestination<
 	/// doesn't have a custom init you'll have to use this method or if you have a base controller that
 	/// requires custom init it'll be beneficial for you to create a custom subclass of StackDestination
 	/// and override it's `initController` class method, you can find an example in tests.
-	convenience init(_ initControllerOverride: @escaping () -> Controller) {
+	public convenience init(_ initControllerOverride: @escaping (StackElementID) -> Controller) {
 		self.init()
-		self._initControllerOverride = initControllerOverride
+		self.overrideInitController(with: initControllerOverride)
 	}
 
 	/// Returns `wrappedValue[id]` if present, intializes and configures a new instance otherwise
 	public subscript(_ id: StackElementID) -> Controller {
-		return wrappedValue[id] ?? {
-			let controller = _initControllerOverride?() ?? Self.initController()
-			configureController(controller)
+		let controller = wrappedValue[id] ?? {
+			let controller = _initControllerOverride?(id) ?? Self.initController(for: id)
 			_controllers[id] = Weak(controller)
+			configureController(controller, for: id)
+			_configuration?(controller, id)
 			return controller
 		}()
+
+		return controller
 	}
 }
 #endif

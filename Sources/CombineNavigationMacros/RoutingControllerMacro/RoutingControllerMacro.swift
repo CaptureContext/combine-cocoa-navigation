@@ -88,7 +88,7 @@ extension RoutingControllerMacro: ExtensionMacro {
 			var destinationsStructDecl: DeclSyntax = """
 			\(raw: destinationStructDocComment)
 			public struct Destinations {
-				public subscript(_ id: some Hashable) -> CocoaViewController? {
+				public subscript(_ id: some Hashable) -> UIViewController? {
 					return nil
 				}
 			}
@@ -157,7 +157,7 @@ extension RoutingControllerMacro: ExtensionMacro {
 
 			let destinationsStructSubscriptDecl: DeclSyntax =
 			"""
-			\npublic subscript(_ id: \(raw: inputType)) -> CocoaViewController? {
+			\npublic subscript(_ id: \(raw: inputType)) -> UIViewController? {
 				return \(raw: stackDestinationsCoalecing)
 			}
 			"""
@@ -167,7 +167,7 @@ extension RoutingControllerMacro: ExtensionMacro {
 			))
 		} else {
 			let destinationsStructSubscriptDecl: DeclSyntax = """
-			\npublic subscript(_ id: some Hashable) -> CocoaViewController? {
+			\npublic subscript(_ id: some Hashable) -> UIViewController? {
 				return nil
 			}
 			"""

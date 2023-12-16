@@ -1,5 +1,5 @@
 import Foundation
 
 extension NSObject {
-	var objectID: ObjectIdentifier { .init(self) }
+	internal var objectID: ObjectIdentifier { .init(self) }
 }

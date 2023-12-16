@@ -2,6 +2,8 @@
 
 [![SwiftPM 5.9](https://img.shields.io/badge/swiftpm-5.9-ED523F.svg?style=flat)](https://github.com/CaptureContext/swift-declarative-configuration/actions/workflows/Test.yml) ![Platforms](https://img.shields.io/badge/platforms-iOS_13_|_macOS_11_|_tvOS_13_|_watchOS_6_|_Catalyst_13-ED523F.svg?style=flat) [![@capture_context](https://img.shields.io/badge/contact-@capture__context-1DA1F2.svg?style=flat&logo=twitter)](https://twitter.com/capture_context) 
 
+>Package compiles for all platforms, but functionality is available if UIKit can be imported and the platform is not watchOS.
+
 > This readme is draft and the branch is still an `beta` version untill all [todos](#Coming soon) are resolved.
 
 ## Usage
@@ -31,7 +33,7 @@ final class MyViewController: UIViewController {
           destinations.$detailsController()
         }
       },
-      onDismiss: capture { _self in 
+      onPop: capture { _self in 
         _self.viewModel.send(.dismiss)
       }
     ).store(in: &cancellables)
@@ -56,7 +58,7 @@ final class MyViewController: UIViewController {
       "my_feature_details"
       isPresented: viewModel.publisher(for: \.state.detais.isNotNil),
       controller: destinations { $0.$detailsController() },
-      onDismiss: capture { $0.viewModel.send(.dismiss) }
+      onPop: capture { $0.viewModel.send(.dismiss) }
     ).store(in: &cancellables)
   }
 }
@@ -94,7 +96,7 @@ final class MyViewController: UIViewController {
           destinations.$featureBControllers[index]
         }
       },
-      onDismiss: capture { _self, indices in
+      onPop: capture { _self, indices in
         // can be handled like `state.path.remove(atOffsets: IndexSet(indices))`
         // should remove all requested indices before publishing an update
         _self.viewModel.send(.dismiss(indices))
@@ -103,15 +105,6 @@ final class MyViewController: UIViewController {
   }
 }
 ```
-
-### Notes and good practices
-
-- One controller should not manage navigation stack and navigation tree
-  
-  > The logic behind collecting controllers navigation stack uses same storage for `navigationStack`s and `navigationDestination`s, so it should not cause any crashes, but it will break the logic
-- Routing controller's parent should be navigationController
-
-  > It's just generally a good practice, but the package handles this corner case and everything should work fine
 
 ## Coming soon
 
