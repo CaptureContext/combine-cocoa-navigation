@@ -4,7 +4,7 @@
 
 >Package compiles for all platforms, but functionality is available if UIKit can be imported and the platform is not watchOS.
 
-> This readme is draft and the branch is still an `beta` version untill all [todos](#Coming soon) are resolved.
+> This readme is draft and the branch is still an `beta` version untill all [todos](#coming-soon) are resolved.
 
 ## Usage
 
