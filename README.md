@@ -8,7 +8,7 @@
 
 ## Usage
 
-This library was primarely created for [TCA](https://github.com/pointfreeco/swift-composable-archtiecture) navigation with Cocoa. However it's geneic enough to use with pure combine. But to dive more into general understanding of stack-based and tree based navigation take a look at TCA docs.
+This library was primarely created for [TCA](https://github.com/pointfreeco/swift-composable-architecture) navigation with Cocoa. However it's geneic enough to use with pure combine. But to dive more into general understanding of stack-based and tree based navigation take a look at TCA docs.
 
 ### Setup
 
