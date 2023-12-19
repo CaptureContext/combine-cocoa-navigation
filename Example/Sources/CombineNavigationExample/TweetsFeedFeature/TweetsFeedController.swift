@@ -45,7 +45,7 @@ public final class TweetsFeedController: ComposableViewControllerOf<TweetsFeedFe
 		navigationDestination(
 			"reply_detail",
 			isPresented: publisher.detail.isNotNil,
-			controller: _detailController.callAsFunction,
+			destination: $detailController,
 			onPop: captureSend(.detail(.dismiss))
 		)
 		.store(in: &cancellables)

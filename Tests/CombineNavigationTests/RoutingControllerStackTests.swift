@@ -6,6 +6,9 @@ import Combine
 
 #if canImport(UIKit) && !os(watchOS)
 
+// TODO: Test deinitialization
+// Note: Manual check succeed ✅
+
 final class RoutingControllerStackTests: XCTestCase {
 	static override func setUp() {
 		CombineNavigation.bootstrap()
@@ -186,12 +189,12 @@ fileprivate class StackViewController: CocoaViewController {
 	func bind<P: Publisher<StackViewModel.State, Never>>(_ publisher: P) {
 		navigationStack(
 			publisher.map(\.path).map { $0.map(\.tag) }.removeDuplicates(),
-			switch: destinations { destinations, route, index in
+			switch: destinations { destinations, route in
 				switch route {
 				case .orderDetail:
-					destinations.$orderDetailControllers[index]
+					destinations.$orderDetailControllers
 				case .feedback:
-					destinations.$feedbackControllers[index]
+					destinations.$feedbackControllers
 				}
 			},
 			onPop: capture { _self, indices in

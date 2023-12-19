@@ -6,6 +6,9 @@ import Combine
 
 #if canImport(UIKit) && !os(watchOS)
 
+// TODO: Test deinitialization
+// Note: Manual check succeed ✅
+
 final class RoutingControllerTreeTests: XCTestCase {
 	static override func setUp() {
 		CombineNavigation.bootstrap()
@@ -105,9 +108,9 @@ fileprivate class TreeViewController: CocoaViewController {
 			switch: destinations { destinations, route in
 				switch route {
 				case .orderDetail:
-					destinations.$orderDetailController()
+					destinations.$orderDetailController
 				case .feedback:
-					destinations.$feedbackController()
+					destinations.$feedbackController
 				}
 			},
 			onPop: capture { _self in

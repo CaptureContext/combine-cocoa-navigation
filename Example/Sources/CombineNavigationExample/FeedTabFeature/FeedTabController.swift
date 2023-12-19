@@ -58,12 +58,12 @@ public final class FeedTabController: ComposableViewControllerOf<FeedTabFeature>
 			publisher.map(\.path).removeDuplicates(by: { $0.ids == $1.ids }),
 			ids: \.ids,
 			route: { $0[id: $1] },
-			switch: destinations { destination, route, id in
+			switch: destinations { destinations, route in
 				switch route {
 				case .feed:
-					destination.$feedControllers[id]
+					destinations.$feedControllers
 				case .profile:
-					destination.$profileControllers[id]
+					destinations.$profileControllers
 				}
 			},
 			onPop: capture { _self, ids in

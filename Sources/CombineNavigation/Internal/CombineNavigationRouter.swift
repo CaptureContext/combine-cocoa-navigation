@@ -25,15 +25,18 @@ extension CombineNavigationRouter {
 		let routingControllerID: ObjectIdentifier
 		private(set) var routedControllerID: ObjectIdentifier?
 		private let controller: () -> CocoaViewController?
+		private let invalidationHandler: (() -> Void)?
 
 		init(
 			id: AnyHashable,
 			routingControllerID: ObjectIdentifier,
-			controller: @escaping () -> CocoaViewController?
+			controller: @escaping () -> CocoaViewController?,
+			invalidationHandler: (() -> Void)?
 		) {
 			self.id = id
 			self.routingControllerID = routingControllerID
 			self.controller = controller
+			self.invalidationHandler = invalidationHandler
 		}
 
 		func makeController(
@@ -81,12 +84,14 @@ final class CombineNavigationRouter: Weakifiable {
 
 	func makeNavigationRoute<ID: Hashable>(
 		for id: ID,
-		controller: @escaping () -> CocoaViewController?
+		controller: @escaping () -> CocoaViewController?,
+		invalidationHandler: (() -> Void)? = nil
 	) -> NavigationRoute {
 		NavigationRoute(
 			id: id,
 			routingControllerID: node.objectID,
-			controller: controller
+			controller: controller,
+			invalidationHandler: invalidationHandler
 		)
 	}
 }

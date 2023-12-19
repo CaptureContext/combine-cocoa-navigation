@@ -52,7 +52,7 @@ final class MyViewController: UIViewController {
       switch: destinations { destinations, route in
         switch route {
         case .details:
-          destinations.$detailsController()
+          destinations.$detailsController
         }
       },
       onPop: capture { _self in 
@@ -79,7 +79,7 @@ final class MyViewController: UIViewController {
     navigationDestination(
       "my_feature_details"
       isPresented: viewModel.publisher(for: \.state.detais.isNotNil),
-      controller: destinations { $0.$detailsController() },
+      destination: $detailsController,
       onPop: capture { $0.viewModel.send(.dismiss) }
     ).store(in: &cancellables)
   }
@@ -110,12 +110,12 @@ final class MyViewController: UIViewController {
   func bindViewModel() {
     navigationStack(
       viewModel.publisher(for: \.state.path),
-      switch: destinations { destinations, route, index in
+      switch: destinations { destinations, route in
         switch route {
         case .featureA:
-          destinations.$featureAControllers[index]
+          destinations.$featureAControllers
         case .featureB:
-          destinations.$featureBControllers[index]
+          destinations.$featureBControllers
         }
       },
       onPop: capture { _self, indices in

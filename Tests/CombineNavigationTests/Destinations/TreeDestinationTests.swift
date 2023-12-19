@@ -66,7 +66,7 @@ fileprivate final class CustomTreeDestination<Controller: CustomViewController>:
 
 	/// Override this method to apply initial configuration to the controller
 	///
-	/// `CombineNavigation` should be imported as `@_spi(Internal) import`
+	/// `CombineNavigation` should be imported as `@_spi(Internals) import`
 	/// to override this declaration
 	override func configureController(_ controller: Controller) {
 		controller.isConfiguredByCustomNavigationChild = true
@@ -76,8 +76,8 @@ fileprivate final class CustomTreeDestination<Controller: CustomViewController>:
 	/// so you can override wrapper's `initController` method
 	/// to call some specific initializer
 	///
-	/// `CombineNavigation` should be imported as `@_spi(Internal) import`
-	/// to override this declaration 
+	/// `CombineNavigation` should be imported as `@_spi(Internals) import`
+	/// to override this declaration
 	override class func initController() -> Controller {
 		.init(value: 1)
 	}

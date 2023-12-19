@@ -121,7 +121,7 @@ fileprivate final class CustomStackDestination<
 
 	/// Override this method to apply initial configuration to the controller
 	///
-	/// `CombineNavigation` should be imported as `@_spi(Internal) import`
+	/// `CombineNavigation` should be imported as `@_spi(Internals) import`
 	/// to override this declaration
 	override func configureController(
 		_ controller: Controller,
@@ -134,7 +134,7 @@ fileprivate final class CustomStackDestination<
 	/// so you can override wrapper's `initController` method
 	/// to call some specific initializer
 	///
-	/// `CombineNavigation` should be imported as `@_spi(Internal) import`
+	/// `CombineNavigation` should be imported as `@_spi(Internals) import`
 	/// to override this declaration
 	override class func initController(
 		for id: StackElementID

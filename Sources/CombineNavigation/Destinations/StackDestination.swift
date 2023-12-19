@@ -4,40 +4,54 @@ import CocoaAliases
 import Combine
 import FoundationExtensions
 
+public protocol GrouppedDestinationProtocol<DestinationID> {
+	associatedtype DestinationID: Hashable
+
+	@_spi(Internals)
+	func _initControllerIfNeeded(for id: DestinationID) -> CocoaViewController
+
+	@_spi(Internals)
+	func _invalidateDestination(for id: DestinationID)
+}
+
 /// Wrapper for creating and accessing managed navigation stack controllers
 @propertyWrapper
 open class StackDestination<
-	StackElementID: Hashable,
+	DestinationID: Hashable,
 	Controller: CocoaViewController
->: Weakifiable {
-	private var _controllers: [StackElementID: Weak<Controller>] = [:]
+>: Weakifiable, GrouppedDestinationProtocol {
+	@_spi(Internals)
+	open var _controllers: [DestinationID: Controller] = [:]
 
-	open var wrappedValue: [StackElementID: Controller] {
-		let controllers = _controllers.compactMapValues(\.wrappedValue)
-		_controllers = controllers.mapValues(Weak.init(wrappedValue:))
-		return controllers
+	open var wrappedValue: [DestinationID: Controller] {
+		_controllers
 	}
 
-	open var projectedValue: StackDestination<StackElementID, Controller> { self }
+	@inlinable
+	open var projectedValue: StackDestination<DestinationID, Controller> { self }
 
-	private var _initControllerOverride: ((StackElementID) -> Controller)?
+	@usableFromInline
+	internal var _initControllerOverride: ((DestinationID) -> Controller)?
 
-	private var _configuration: ((Controller, StackElementID) -> Void)?
+	@usableFromInline
+	internal var _configuration: ((Controller, DestinationID) -> Void)?
 
 	/// Sets instance-specific override for creating a new controller
 	///
 	/// This override has the highest priority when creating a new controller
 	///
 	/// To disable isntance-specific override pass `nil` to this method
+	@inlinable
 	public func overrideInitController(
-		with closure: ((StackElementID) -> Controller)?
+		with closure: ((DestinationID) -> Controller)?
 	) {
 		_initControllerOverride = closure
 	}
 
 	/// Sets instance-specific configuration for controllers
+	@inlinable
 	public func setConfiguration(
-		_ closure: ((Controller, StackElementID) -> Void)?
+		_ closure: ((Controller, DestinationID) -> Void)?
 	) {
 		_configuration = closure
 		closure.map { configure in
@@ -47,15 +61,19 @@ open class StackDestination<
 		}
 	}
 
-	@_spi(Internals) open class func initController(
-		for id: StackElementID
+	@_spi(Internals)
+	@inlinable
+	open class func initController(
+		for id: DestinationID
 	) -> Controller {
 		return Controller()
 	}
 
-	@_spi(Internals) open func configureController(
+	@_spi(Internals)
+	@inlinable
+	open func configureController(
 		_ controller: Controller,
-		for id: StackElementID
+		for id: DestinationID
 	) {}
 
 	/// Creates a new instance
@@ -70,16 +88,31 @@ open class StackDestination<
 	/// doesn't have a custom init you'll have to use this method or if you have a base controller that
 	/// requires custom init it'll be beneficial for you to create a custom subclass of StackDestination
 	/// and override it's `initController` class method, you can find an example in tests.
-	public convenience init(_ initControllerOverride: @escaping (StackElementID) -> Controller) {
+	@inlinable
+	public convenience init(_ initControllerOverride: @escaping (DestinationID) -> Controller) {
 		self.init()
 		self.overrideInitController(with: initControllerOverride)
 	}
 
+	@_spi(Internals)
+	@inlinable
+	public func _initControllerIfNeeded(
+		for id: DestinationID
+	) -> CocoaViewController {
+		return self[id]
+	}
+
+	@_spi(Internals)
+	@inlinable
+	open func _invalidateDestination(for id: DestinationID) {
+		self._controllers.removeValue(forKey: id)
+	}
+
 	/// Returns `wrappedValue[id]` if present, intializes and configures a new instance otherwise
-	public subscript(_ id: StackElementID) -> Controller {
+	public subscript(_ id: DestinationID) -> Controller {
 		let controller = wrappedValue[id] ?? {
 			let controller = _initControllerOverride?(id) ?? Self.initController(for: id)
-			_controllers[id] = Weak(controller)
+			_controllers[id] = controller
 			configureController(controller, for: id)
 			_configuration?(controller, id)
 			return controller
@@ -89,3 +122,10 @@ open class StackDestination<
 	}
 }
 #endif
+
+/*
+- Add erased protocols for Tree/StackDestination with some cleanup function
+- Make RoutingController.destinations method return an instance of the protocol
+- In CocoaViewController+API.swift add custom navigationStack/Destination methods
+- Those methods will inject cleanup function call into onPop handler
+*/

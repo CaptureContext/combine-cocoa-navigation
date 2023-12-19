@@ -7,31 +7,24 @@ public protocol RoutingController: CocoaViewController {
 }
 
 extension RoutingController {
-	private static func _mapNavigationDestinations<each Arg, Output>(
-		_ destinations: Destinations,
-		_ mapping: @escaping (Destinations, repeat each Arg) -> Output
-	) -> (repeat each Arg) -> Output {
-		return { (arg: repeat each Arg) in
-			mapping(destinations, repeat each arg)
+	@inlinable
+	public func destinations<Route>(
+		_ mapping: @escaping (Destinations, Route) -> SingleDestinationProtocol
+	) -> (Route) -> SingleDestinationProtocol {
+		let destinations = _makeDestinations()
+		return { route in
+			mapping(destinations, route)
 		}
 	}
 
-	public func destinations<Route>(
-		_ mapping: @escaping (Destinations, Route) -> CocoaViewController
-	) -> (Route) -> CocoaViewController {
-		Self._mapNavigationDestinations(
-			_makeDestinations(),
-			mapping
-		)
-	}
-
-	public func destinations<Route, ID: Hashable>(
-		_ mapping: @escaping (Destinations, Route, ID) -> CocoaViewController
-	) -> (Route, ID) -> CocoaViewController {
-		Self._mapNavigationDestinations(
-			_makeDestinations(),
-			mapping
-		)
+	@inlinable
+	public func destinations<Route, DestinationID: Hashable>(
+		_ mapping: @escaping (Destinations, Route) -> any GrouppedDestinationProtocol<DestinationID>
+	) -> (Route) -> any GrouppedDestinationProtocol<DestinationID> {
+		let destinations = _makeDestinations()
+		return { route in
+			mapping(destinations, route)
+		}
 	}
 }
 #endif
