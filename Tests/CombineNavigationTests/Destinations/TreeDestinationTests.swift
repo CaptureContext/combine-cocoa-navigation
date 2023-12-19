@@ -1,6 +1,6 @@
 import XCTest
 import CocoaAliases
-@_spi(Internals) @testable import CombineNavigation
+@_spi(Internals) import CombineNavigation
 
 #if canImport(UIKit) && !os(watchOS)
 final class TreeDestinationTests: XCTestCase {

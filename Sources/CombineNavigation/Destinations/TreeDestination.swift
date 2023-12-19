@@ -8,8 +8,8 @@ import FoundationExtensions
 @propertyWrapper
 open class TreeDestination<Controller: CocoaViewController>: Weakifiable {
 	private weak var _controller: Controller?
-	public var wrappedValue: Controller? { _controller }
-	public var projectedValue: TreeDestination<Controller> { self }
+	open var wrappedValue: Controller? { _controller }
+	open var projectedValue: TreeDestination<Controller> { self }
 	
 	private var _initControllerOverride: (() -> Controller)?
 
@@ -36,7 +36,7 @@ open class TreeDestination<Controller: CocoaViewController>: Weakifiable {
 		}
 	}
 
-	@_spi(Internals) public class func initController() -> Controller {
+	@_spi(Internals) open class func initController() -> Controller {
 		return Controller()
 	}
 	

@@ -11,12 +11,14 @@ open class StackDestination<
 	Controller: CocoaViewController
 >: Weakifiable {
 	private var _controllers: [StackElementID: Weak<Controller>] = [:]
-	public var wrappedValue: [StackElementID: Controller] {
+
+	open var wrappedValue: [StackElementID: Controller] {
 		let controllers = _controllers.compactMapValues(\.wrappedValue)
 		_controllers = controllers.mapValues(Weak.init(wrappedValue:))
 		return controllers
 	}
-	public var projectedValue: StackDestination<StackElementID, Controller> { self }
+
+	open var projectedValue: StackDestination<StackElementID, Controller> { self }
 
 	private var _initControllerOverride: ((StackElementID) -> Controller)?
 
@@ -45,7 +47,7 @@ open class StackDestination<
 		}
 	}
 
-	@_spi(Internals) public class func initController(
+	@_spi(Internals) open class func initController(
 		for id: StackElementID
 	) -> Controller {
 		return Controller()
