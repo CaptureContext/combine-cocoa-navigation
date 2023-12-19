@@ -7,6 +7,10 @@ import Combine
 #if canImport(UIKit) && !os(watchOS)
 
 final class RoutingControllerTreeTests: XCTestCase {
+	static override func setUp() {
+		CombineNavigation.bootstrap()
+	}
+
 	func testNavigationTree() {
 		let viewModel = TreeViewModel()
 		let controller = TreeViewController()

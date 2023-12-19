@@ -7,6 +7,10 @@ import Combine
 #if canImport(UIKit) && !os(watchOS)
 
 final class RoutingControllerStackTests: XCTestCase {
+	static override func setUp() {
+		CombineNavigation.bootstrap()
+	}
+
 	func testNavigationStack() {
 		let viewModel = StackViewModel()
 		let controller = StackViewController()

@@ -11,6 +11,10 @@ import SwiftUI
 // TODO: Add test for `navigationStack(_:ids:route:switch:onDismiss:)`")
 // TODO: Add test for `navigationDestination(_:isPresented:controller:onDismiss:)`")
 final class RoutingControllerTests: XCTestCase {
+	static override func setUp() {
+		CombineNavigation.bootstrap()
+	}
+
 	func testMain() {
 		let root = StackViewController()
 		let viewModel = StackViewModel(initialState: .init())
