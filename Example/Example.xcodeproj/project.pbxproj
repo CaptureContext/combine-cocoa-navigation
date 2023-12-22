@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		E17092122B048C170026D033 /* CombineNavigationExample in Frameworks */ = {isa = PBXBuildFile; productRef = E17092112B048C170026D033 /* CombineNavigationExample */; };
+		E11363F22B32984100915F38 /* AppFeature in Frameworks */ = {isa = PBXBuildFile; productRef = E11363F12B32984100915F38 /* AppFeature */; };
 		E1A59CDA2AFFF5D400E08FF8 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A59CD92AFFF5D400E08FF8 /* AppDelegate.swift */; };
 		E1A59CDC2AFFF5D400E08FF8 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1A59CDB2AFFF5D400E08FF8 /* SceneDelegate.swift */; };
 		E1A59CE32AFFF5D600E08FF8 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E1A59CE22AFFF5D600E08FF8 /* Assets.xcassets */; };
@@ -28,7 +28,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				E17092122B048C170026D033 /* CombineNavigationExample in Frameworks */,
+				E11363F22B32984100915F38 /* AppFeature in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -88,7 +88,7 @@
 			);
 			name = Example;
 			packageProductDependencies = (
-				E17092112B048C170026D033 /* CombineNavigationExample */,
+				E11363F12B32984100915F38 /* AppFeature */,
 			);
 			productName = Example;
 			productReference = E1A59CD62AFFF5D400E08FF8 /* Example.app */;
@@ -360,9 +360,9 @@
 /* End XCConfigurationList section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		E17092112B048C170026D033 /* CombineNavigationExample */ = {
+		E11363F12B32984100915F38 /* AppFeature */ = {
 			isa = XCSwiftPackageProductDependency;
-			productName = CombineNavigationExample;
+			productName = AppFeature;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

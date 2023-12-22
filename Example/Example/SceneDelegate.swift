@@ -5,18 +5,25 @@
 //  Created by Maxim Krouk on 11.11.2023.
 //
 
+import _ComposableArchitecture
 import UIKit
-import ComposableArchitecture
-import CombineNavigationExample
 import CombineNavigation
+import AppFeature
 
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 	var window: UIWindow?
 	let store = Store(
-		initialState: FeedTabFeature.State(feed: .init(list: .init(
-			uncheckedUniqueElements: TweetModel.mockTweets.filter(\.replyTo.isNil)
-				.map { .mock(model: $0) }
-		))),
+		initialState: FeedTabFeature.State(
+			feed: .init(
+				list: .init(
+					tweets: .init(
+						uncheckedUniqueElements: TweetModel
+							.mockTweets.filter(\.replyTo.isNil)
+							.map { .mock(model: $0) }
+					)
+				)
+			)
+		),
 		reducer: {
 			FeedTabFeature()._printChanges()
 		}

@@ -5,34 +5,286 @@ import PackageDescription
 let package = Package(
 	name: "CombineNavigationExample",
 	platforms: [
-		.iOS(.v16)
-	],
-	products: [
-		.library(
-			name: "CombineNavigationExample",
-			targets: ["CombineNavigationExample"]
-		),
+		.iOS(.v17)
 	],
 	dependencies: [
-		.package(path: ".."),
 		.package(
-			url: "https://github.com/pointfreeco/swift-composable-architecture.git",
-			.upToNextMajor(from: "1.5.0")
+			url: "https://github.com/capturecontext/composable-architecture-extensions.git",
+			branch: "observation-beta"
+		),
+		.package(
+			url: "https://github.com/capturecontext/swift-foundation-extensions.git",
+			.upToNextMinor(from: "0.4.0")
 		),
 	],
-	targets: [
+	producibleTargets: [
+		// MARK: - Utils
+		// Basic extensions for every module
+		// Ideally should be extracted to a separate `Extensions` package
+		// See https://github.com/capturecontext/basic-ios-template
+		// - Should not import compex dependencies
+		// - Must not import targets from other sections
+
 		.target(
-			name: "CombineNavigationExample",
+			name: "LocalExtensions",
+			product: .library(.static),
 			dependencies: [
 				.product(
-					name: "ComposableArchitecture",
-					package: "swift-composable-architecture"
-				),
-				.product(
-					name: "CombineNavigation",
-					package: "combine-cocoa-navigation"
+					name: "FoundationExtensions",
+					package: "swift-foundation-extensions"
 				)
+			],
+			path: ._extensions("LocalExtensions")
+		),
+
+		// MARK: - Dependencies
+		// Separate target for each dependency
+		// Ideally should be extracted to a separate `Dependencies` package
+		// See https://github.com/capturecontext/basic-ios-template
+		// - Can import targets from `Utils` section
+
+		// Meant to locally extend ComposableExtensions
+		.target(
+			name: "_ComposableArchitecture",
+			product: .library(.static),
+			dependencies: [
+				.localExtensions,
+				.product(
+					name: "ComposableExtensions",
+					package: "composable-architecture-extensions"
+				)
+			],
+			path: ._dependencies("_ComposableArchitecture")
+		),
+
+		// MARK: - Modules
+		// Application modules
+		// - Feature modules have suffix `Feature`
+		// - Service and Model modules have no suffix
+
+		.target(
+			name: "AppFeature",
+			product: .library(.static),
+			dependencies: [
+				.localExtensions,
+				.dependency("_ComposableArchitecture"),
 			]
 		)
 	]
 )
+
+// MARK: - Helpers
+
+extension Target.Dependency {
+	static var localExtensions: Target.Dependency {
+		//	.product(name: "LocalExtensions", package: "Extensions")
+		return .target("LocalExtensions")
+	}
+
+	static func dependency(_ name: String) -> Target.Dependency {
+		// .product(name: name, package: "Dependencies")
+		return .target(name)
+	}
+
+	static func target(_ name: String) -> Target.Dependency {
+		.target(name: name)
+	}
+}
+
+extension CustomTargetPathBuilder {
+	static func _dependencies(_ module: String) -> Self {
+		.init(module).nested(in: "_Dependencies").nested(in: "Sources")
+	}
+
+	static func _extensions(_ module: String) -> Self {
+		.init(module).nested(in: "_Extensions").nested(in: "Sources")
+	}
+}
+
+struct CustomTargetPathBuilder: ExpressibleByStringLiteral {
+	private let build: (String) -> String
+
+	func build(for targetName: String) -> String {
+		build(targetName)
+	}
+
+	init(_ build: @escaping (String) -> String) {
+		self.build = build
+	}
+
+	init(_ value: String) {
+		self.init { _ in value }
+	}
+
+	init(stringLiteral value: String) {
+		self.init(value)
+	}
+
+	static var targetName: Self {
+		return .init { $0 }
+	}
+
+	func map(_ transform: @escaping (String) -> String) -> Self {
+		return .init { transform(self.build(for: $0)) }
+	}
+
+	func nestedInSources() -> Self {
+		return nested(in: "Sources")
+	}
+
+	func nested(in parent: String) -> Self {
+		return map { "\(parent)/\($0)" }
+	}
+
+	func suffixed(by suffix: String) -> Self {
+		return map { "\($0)\(suffix)" }
+	}
+
+	func prefixed(by prefix: String) -> Self {
+		return map { "\(prefix)\($0)" }
+	}
+}
+
+enum ProductType: Equatable {
+	case executable
+	case library(PackageDescription.Product.Library.LibraryType? = .static)
+}
+
+struct ProducibleTarget {
+	init(
+		target: Target,
+		productType: ProductType? = .none
+	) {
+		self.target = target
+		self.productType = productType
+	}
+
+	var target: Target
+	var productType: ProductType?
+
+	var product: PackageDescription.Product? {
+		switch productType {
+		case .executable:
+			// return .executable(name: target.name, targets: [target.name])
+			return nil
+		case .library(let type):
+			return .library(name: target.name, type: type, targets: [target.name])
+		case .none:
+			return nil
+		}
+	}
+
+	static func target(
+		name: String,
+		product productType: ProductType? = nil,
+		dependencies: [Target.Dependency] = [],
+		path: CustomTargetPathBuilder? = nil,
+		exclude: [String] = [],
+		sources: [String]? = nil,
+		resources: [Resource]? = nil,
+		publicHeadersPath: String? = nil,
+		packageAccess: Bool = true,
+		cSettings: [CSetting]? = nil,
+		cxxSettings: [CXXSetting]? = nil,
+		swiftSettings: [SwiftSetting]? = nil,
+		linkerSettings: [LinkerSetting]? = nil,
+		plugins: [Target.PluginUsage]? = nil
+	) -> ProducibleTarget {
+		ProducibleTarget(
+			target: productType == .executable
+			? .executableTarget(
+				name: name,
+				dependencies: dependencies,
+				path: path?.build(for: name),
+				exclude: exclude,
+				sources: sources,
+				resources: resources,
+				publicHeadersPath: publicHeadersPath,
+				packageAccess: packageAccess,
+				cSettings: cSettings,
+				cxxSettings: cxxSettings,
+				swiftSettings: swiftSettings,
+				linkerSettings: linkerSettings,
+				plugins: plugins
+			)
+			: .target(
+				name: name,
+				dependencies: dependencies,
+				path: path?.build(for: name),
+				exclude: exclude,
+				sources: sources,
+				resources: resources,
+				publicHeadersPath: publicHeadersPath,
+				packageAccess: packageAccess,
+				cSettings: cSettings,
+				cxxSettings: cxxSettings,
+				swiftSettings: swiftSettings,
+				linkerSettings: linkerSettings,
+				plugins: plugins
+			),
+			productType: productType
+		)
+	}
+
+	static func testTarget(
+		name: String,
+		dependencies: [Target.Dependency] = [],
+		path: CustomTargetPathBuilder? = nil,
+		exclude: [String] = [],
+		sources: [String]? = nil,
+		resources: [Resource]? = nil,
+		packageAccess: Bool = true,
+		cSettings: [CSetting]? = nil,
+		cxxSettings: [CXXSetting]? = nil,
+		swiftSettings: [SwiftSetting]? = nil,
+		linkerSettings: [LinkerSetting]? = nil,
+		plugins: [Target.PluginUsage]? = nil
+	) -> ProducibleTarget {
+		ProducibleTarget(
+			target: .testTarget(
+				name: name,
+				dependencies: dependencies,
+				path: path?.build(for: name),
+				exclude: exclude,
+				sources: sources,
+				resources: resources,
+				packageAccess: packageAccess,
+				cSettings: cSettings,
+				cxxSettings: cxxSettings,
+				swiftSettings: swiftSettings,
+				linkerSettings: linkerSettings,
+				plugins: plugins
+			),
+			productType: .none
+		)
+	}
+}
+
+extension Package {
+	convenience init(
+		name: String,
+		defaultLocalization: LanguageTag? = nil,
+		platforms: [SupportedPlatform]? = nil,
+		pkgConfig: String? = nil,
+		providers: [SystemPackageProvider]? = nil,
+		dependencies: [Dependency] = [],
+		producibleTargets: [ProducibleTarget],
+		swiftLanguageVersions: [SwiftVersion]? = nil,
+		cLanguageStandard: CLanguageStandard? = nil,
+		cxxLanguageStandard: CXXLanguageStandard? = nil
+	) {
+		self.init(
+			name: name,
+			defaultLocalization: defaultLocalization,
+			platforms: platforms,
+			pkgConfig: pkgConfig,
+			providers: providers,
+			products: producibleTargets.compactMap(\.product),
+			dependencies: dependencies,
+			targets: producibleTargets.map(\.target),
+			swiftLanguageVersions: swiftLanguageVersions,
+			cLanguageStandard: cLanguageStandard,
+			cxxLanguageStandard: cxxLanguageStandard
+		)
+	}
+}
