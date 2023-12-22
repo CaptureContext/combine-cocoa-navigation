@@ -5,7 +5,8 @@ import Combine
 import FoundationExtensions
 
 extension CocoaViewController {
-	var combineNavigationRouter: CombineNavigationRouter {
+	@usableFromInline
+	internal var combineNavigationRouter: CombineNavigationRouter {
 		getAssociatedObject(forKey: #function) ?? {
 			let router = CombineNavigationRouter(self)
 			setAssociatedObject(router, forKey: #function)
@@ -13,6 +14,7 @@ extension CocoaViewController {
 		}()
 	}
 
+	@inlinable
 	public func addRoutedChild(_ controller: CocoaViewController) {
 		combineNavigationRouter.addChild(controller.combineNavigationRouter)
 		addChild(controller)
@@ -20,8 +22,11 @@ extension CocoaViewController {
 }
 
 extension CombineNavigationRouter {
+	@usableFromInline
 	class NavigationRoute: Identifiable {
+		@usableFromInline
 		let id: AnyHashable
+
 		let routingControllerID: ObjectIdentifier
 		private(set) var routedControllerID: ObjectIdentifier?
 		private let controller: () -> CocoaViewController?
@@ -50,6 +55,7 @@ extension CombineNavigationRouter {
 	}
 }
 
+@usableFromInline
 final class CombineNavigationRouter: Weakifiable {
 	fileprivate weak var parent: CombineNavigationRouter?
 	fileprivate weak var node: CocoaViewController!
@@ -67,7 +73,8 @@ final class CombineNavigationRouter: Weakifiable {
 		self.node = node
 	}
 
-	fileprivate func addChild(_ router: CombineNavigationRouter) {
+	@usableFromInline
+	internal func addChild(_ router: CombineNavigationRouter) {
 		router.parent = self
 		directChildren.removeAll(where: { $0.object === router })
 		directChildren.append(.init(router))

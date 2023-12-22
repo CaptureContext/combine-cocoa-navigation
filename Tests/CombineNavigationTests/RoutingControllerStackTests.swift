@@ -189,7 +189,7 @@ fileprivate class StackViewController: CocoaViewController {
 	func bind<P: Publisher<StackViewModel.State, Never>>(_ publisher: P) {
 		navigationStack(
 			publisher.map(\.path).map { $0.map(\.tag) }.removeDuplicates(),
-			switch: destinations { destinations, route in
+			switch: { destinations, route in
 				switch route {
 				case .orderDetail:
 					destinations.$orderDetailControllers

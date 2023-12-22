@@ -49,7 +49,7 @@ final class MyViewController: UIViewController {
   func bindViewModel() {
     navigationDestination(
       viewModel.publisher(for: \.state.route),
-      switch: destinations { destinations, route in
+      switch: { destinations, route in
         switch route {
         case .details:
           destinations.$detailsController
@@ -110,7 +110,7 @@ final class MyViewController: UIViewController {
   func bindViewModel() {
     navigationStack(
       viewModel.publisher(for: \.state.path),
-      switch: destinations { destinations, route in
+      switch: { destinations, route in
         switch route {
         case .featureA:
           destinations.$featureAControllers

@@ -174,7 +174,7 @@ fileprivate class TreeViewController: CocoaViewController {
 
 		navigationDestination(
 			publisher.map(\.destination?.tag).removeDuplicates(),
-			switch: destinations { destinations, route in
+			switch: { destinations, route in
 				switch route {
 				case .tree:
 					destinations.$treeController
@@ -306,12 +306,12 @@ fileprivate class StackViewController: CocoaViewController {
 
 		navigationStack(
 			publisher.map(\.path).map { $0.map(\.tag) }.removeDuplicates(),
-			switch: destinations { destination, route in
+			switch: { destinations, route in
 				switch route {
 				case .tree:
-					destination.$treeControllers
+					destinations.$treeControllers
 				case .stack:
-					destination.$stackControllers
+					destinations.$stackControllers
 				}
 			},
 			onPop: capture { _self, indices in
@@ -320,5 +320,6 @@ fileprivate class StackViewController: CocoaViewController {
 		)
 		.store(in: &cancellables)
 	}
+
 }
 #endif
