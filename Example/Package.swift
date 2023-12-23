@@ -16,6 +16,10 @@ let package = Package(
 			url: "https://github.com/capturecontext/swift-foundation-extensions.git",
 			.upToNextMinor(from: "0.4.0")
 		),
+		.package(
+			url: "https://github.com/pointfreeco/swift-identified-collections.git",
+			.upToNextMajor(from: "1.0.0")
+		),
 	],
 	producibleTargets: [
 		// MARK: - Utils
@@ -32,6 +36,10 @@ let package = Package(
 				.product(
 					name: "FoundationExtensions",
 					package: "swift-foundation-extensions"
+				),
+				.product(
+					name: "IdentifiedCollections",
+					package: "swift-identified-collections"
 				)
 			],
 			path: ._extensions("LocalExtensions")
@@ -66,10 +74,164 @@ let package = Package(
 			name: "AppFeature",
 			product: .library(.static),
 			dependencies: [
-				.localExtensions,
+				.target("AppUI"),
+				.target("FeedTabFeature"),
 				.dependency("_ComposableArchitecture"),
+				.localExtensions,
 			]
-		)
+		),
+
+		.target(
+			name: "AppModels",
+			product: .library(.static),
+			dependencies: [
+				.localExtensions
+			]
+		),
+
+		.target(
+			name: "AppUI",
+			product: .library(.static),
+			dependencies: [
+				.localExtensions,
+			]
+		),
+
+		.target(
+			name: "CurrentUserProfileFeature",
+			product: .library(.static),
+			dependencies: [
+				.target("AppModels"),
+				.target("TweetsListFeature"),
+				.target("UserSettingsFeature"),
+				.dependency("_ComposableArchitecture"),
+				.localExtensions,
+			]
+		),
+
+		.target(
+			name: "FeedAndProfileFeature",
+			product: .library(.static),
+			dependencies: [
+				.dependency("_ComposableArchitecture"),
+				.localExtensions,
+			]
+		),
+
+		.target(
+			name: "FeedTabFeature",
+			product: .library(.static),
+			dependencies: [
+				.target("ProfileFeature"),
+				.target("TweetsFeedFeature"),
+				.dependency("_ComposableArchitecture"),
+				.localExtensions,
+			]
+		),
+
+		.target(
+			name: "MainFeature",
+			product: .library(.static),
+			dependencies: [
+				.dependency("_ComposableArchitecture"),
+				.localExtensions,
+			]
+		),
+
+		.target(
+			name: "ProfileFeature",
+			product: .library(.static),
+			dependencies: [
+				.target("UserProfileFeature"),
+				.target("CurrentUserProfileFeature"),
+				.dependency("_ComposableArchitecture"),
+				.localExtensions,
+			]
+		),
+
+		.target(
+			name: "ProfileFeedFeature",
+			product: .library(.static),
+			dependencies: [
+				.target("TweetFeature"),
+				.dependency("_ComposableArchitecture"),
+				.localExtensions,
+			]
+		),
+
+		.target(
+			name: "ProfileTabFeature",
+			product: .library(.static),
+			dependencies: [
+				.target("AppModels"),
+				.target("TweetsFeedFeature"),
+				.target("UserProfileFeature"),
+				.dependency("_ComposableArchitecture"),
+				.localExtensions,
+			]
+		),
+
+		.target(
+			name: "TweetDetailFeature",
+			product: .library(.static),
+			dependencies: [
+				.target("TweetFeature"),
+				.target("TweetsListFeature"),
+				.dependency("_ComposableArchitecture"),
+				.localExtensions,
+			]
+		),
+
+		.target(
+			name: "TweetFeature",
+			product: .library(.static),
+			dependencies: [
+				.target("AppModels"),
+				.dependency("_ComposableArchitecture"),
+				.localExtensions,
+			]
+		),
+
+		.target(
+			name: "TweetsFeedFeature",
+			product: .library(.static),
+			dependencies: [
+				.target("TweetsListFeature"),
+				.target("TweetDetailFeature"),
+				.dependency("_ComposableArchitecture"),
+				.localExtensions,
+			]
+		),
+
+		.target(
+			name: "TweetsListFeature",
+			product: .library(.static),
+			dependencies: [
+				.target("TweetFeature"),
+				.dependency("_ComposableArchitecture"),
+				.localExtensions,
+			]
+		),
+
+		.target(
+			name: "UserProfileFeature",
+			product: .library(.static),
+			dependencies: [
+				.target("AppModels"),
+				.target("TweetsListFeature"),
+				.dependency("_ComposableArchitecture"),
+				.localExtensions,
+			]
+		),
+
+		.target(
+			name: "UserSettingsFeature",
+			product: .library(.static),
+			dependencies: [
+				.dependency("_ComposableArchitecture"),
+				.localExtensions,
+			]
+		),
 	]
 )
 
