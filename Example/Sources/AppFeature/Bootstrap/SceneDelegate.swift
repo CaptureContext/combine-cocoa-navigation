@@ -8,24 +8,30 @@
 import _ComposableArchitecture
 import AppUI
 import AppModels
-import FeedTabFeature
+import MainFeature
 
 public class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 	public var window: UIWindow?
 	let store = Store(
-		initialState: FeedTabFeature.State(
+		initialState: MainFeature.State(
 			feed: .init(
-				list: .init(
-					tweets: .init(
-						uncheckedUniqueElements: TweetModel
-							.mockTweets.filter(\.replyTo.isNil)
-							.map { .mock(model: $0) }
+				feed: .init(
+					list: .init(
+						tweets: .init(
+							uncheckedUniqueElements: TweetModel
+								.mockTweets.filter(\.replyTo.isNil)
+								.map { .mock(model: $0) }
+						)
 					)
 				)
-			)
+			),
+			profile: .init(
+				root: .init(model: .mock())
+			),
+			selectedTab: .feed
 		),
 		reducer: {
-			FeedTabFeature()._printChanges()
+			MainFeature()._printChanges()
 		}
 	)
 
@@ -35,7 +41,7 @@ public class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 		options connectionOptions: UIScene.ConnectionOptions
 	) {
 		guard let scene = scene as? UIWindowScene else { return }
-		let controller = FeedTabController()
+		let controller = MainViewController()
 		controller.setStore(store)
 
 		let window = UIWindow(windowScene: scene)

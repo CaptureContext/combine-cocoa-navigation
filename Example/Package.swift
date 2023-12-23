@@ -75,7 +75,7 @@ let package = Package(
 			product: .library(.static),
 			dependencies: [
 				.target("AppUI"),
-				.target("FeedTabFeature"),
+				.target("MainFeature"),
 				.dependency("_ComposableArchitecture"),
 				.localExtensions,
 			]
@@ -133,6 +133,8 @@ let package = Package(
 			name: "MainFeature",
 			product: .library(.static),
 			dependencies: [
+				.target("FeedTabFeature"),
+				.target("ProfileTabFeature"),
 				.dependency("_ComposableArchitecture"),
 				.localExtensions,
 			]

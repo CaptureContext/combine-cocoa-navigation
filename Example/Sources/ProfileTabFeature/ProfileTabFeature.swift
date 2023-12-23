@@ -1,4 +1,6 @@
 import _ComposableArchitecture
+import UserProfileFeature
+import TweetsFeedFeature
 
 @Reducer
 public struct ProfileTabFeature {

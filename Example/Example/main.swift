@@ -1,12 +1,8 @@
-import AppFeature
-import AppUI
-
-let delegate = AppDelegate()
-UIApplication.shared.delegate = delegate
+import UIKit
 
 _ = UIApplicationMain(
 	CommandLine.argc,
 	CommandLine.unsafeArgv,
 	nil,
-	nil
+	"AppFeature.AppDelegate"
 )

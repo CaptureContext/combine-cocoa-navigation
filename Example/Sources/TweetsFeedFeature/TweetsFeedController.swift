@@ -6,10 +6,7 @@ import TweetsListFeature
 import TweetDetailFeature
 
 @RoutingController
-public final class TweetsFeedController: ComposableViewController<
-	TweetsFeedFeature.State,
-	TweetsFeedFeature.Action
-> {
+public final class TweetsFeedController: ComposableViewControllerOf<TweetsFeedFeature> {
 	let host = ComposableHostingController<TweetsListView>(rootView: nil)
 
 	@ComposableTreeDestination

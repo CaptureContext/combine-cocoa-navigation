@@ -7,10 +7,7 @@ import Capture
 import CombineNavigation
 
 @RoutingController
-public final class TweetDetailController: ComposableViewController<
-	TweetDetailFeature.State,
-	TweetDetailFeature.Action
-> {
+public final class TweetDetailController: ComposableViewControllerOf<TweetDetailFeature> {
 	let host = ComposableHostingController<TweetDetailView>(rootView: nil)
 
 	@ComposableTreeDestination

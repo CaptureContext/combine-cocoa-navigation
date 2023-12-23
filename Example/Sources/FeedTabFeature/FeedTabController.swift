@@ -6,10 +6,7 @@ import ProfileFeature
 import TweetsFeedFeature
 
 @RoutingController
-public final class FeedTabController: ComposableViewController<
-	FeedTabFeature.State,
-	FeedTabFeature.Action
-> {
+public final class FeedTabController: ComposableViewControllerOf<FeedTabFeature> {
 	let contentController: TweetsFeedController = .init()
 
 	@ComposableStackDestination
