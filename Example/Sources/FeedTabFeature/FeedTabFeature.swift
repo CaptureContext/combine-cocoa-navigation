@@ -32,6 +32,7 @@ public struct FeedTabFeature {
 		}
 	}
 
+	@ObservableState
 	public struct State: Equatable {
 		public var feed: TweetsFeedFeature.State
 		public var path: StackState<Path.State>
