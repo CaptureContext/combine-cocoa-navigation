@@ -1,5 +1,5 @@
 import _ComposableArchitecture
-import Foundation
+import LocalExtensions
 import AppModels
 
 @Reducer
@@ -8,19 +8,34 @@ public struct TweetFeature {
 
 	@ObservableState
 	public struct State: Equatable, Identifiable {
-		public var id: UUID
-		public var replyTo: UUID?
+		public var id: USID
+		public var replyTo: USID?
+		public var repliesCount: Int
+		public var isLiked: Bool
+		public var likesCount: Int
+		public var isReposted: Bool
+		public var repostsCount: Int
 		public var author: UserModel
 		public var text: String
 
 		public init(
-			id: UUID,
-			replyTo: UUID? = nil,
+			id: USID,
+			replyTo: USID? = nil,
+			repliesCount: Int = 0,
+			isLiked: Bool = false,
+			likesCount: Int = 0,
+			isReposted: Bool = false,
+			repostsCount: Int = 0,
 			author: UserModel,
 			text: String
 		) {
 			self.id = id
 			self.replyTo = replyTo
+			self.repliesCount = repliesCount
+			self.isLiked = isLiked
+			self.likesCount = likesCount
+			self.isReposted = isReposted
+			self.repostsCount = repostsCount
 			self.author = author
 			self.text = text
 		}
@@ -37,8 +52,8 @@ public struct TweetFeature {
 	 }
 
 	 public static func mock(
-		 id: UUID = .init(),
-		 replyTo: UUID? = nil,
+		 id: USID = .init(),
+		 replyTo: USID? = nil,
 		 author: UserModel = .mock(),
 		 text: String = """
 		 Nisi commodo non ea consequat qui ad pariatur dolore elit ipsum laboris ipsum. \
@@ -55,7 +70,7 @@ public struct TweetFeature {
 	 }
 
 	 public func mockReply(
-		 id: UUID = .init(),
+		 id: USID = .init(),
 		 author: UserModel = .mock(),
 		 text: String = """
 		 Nisi commodo non ea consequat qui ad pariatur dolore elit ipsum laboris ipsum. \
@@ -75,8 +90,8 @@ public struct TweetFeature {
 	public enum Action: Equatable {
 		case tap
 		case tapOnAuthor
-		case openDetail(for: UUID)
-		case openProfile(UUID)
+		case openDetail(for: USID)
+		case openProfile(USID)
 	}
 
 	public func reduce(

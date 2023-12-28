@@ -20,7 +20,7 @@ public struct ProfileFeedFeature {
 
 	public enum Action: Equatable {
 		case tweets(IdentifiedActionOf<TweetFeature>)
-		case openProfile(UUID)
+		case openProfile(USID)
 	}
 
 	public var body: some ReducerOf<Self> {

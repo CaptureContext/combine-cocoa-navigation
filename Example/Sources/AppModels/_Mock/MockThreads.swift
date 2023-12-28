@@ -2,7 +2,7 @@ import LocalExtensions
 
 extension TweetModel {
 	public static func mockReplies(
-	 for id: UUID
+	 for id: USID
  ) -> IdentifiedArrayOf<TweetModel> {
 	 mockTweets[id: id].map { source in
 		 mockTweets.filter { $0.replyTo == source.id }

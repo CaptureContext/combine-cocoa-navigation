@@ -1,5 +1,5 @@
 import _ComposableArchitecture
-import Foundation
+import LocalExtensions
 import TweetFeature
 
 @Reducer
@@ -17,8 +17,8 @@ public struct TweetsListFeature {
 
 	public enum Action: Equatable {
 		case tweets(IdentifiedActionOf<TweetFeature>)
-		case openDetail(for: UUID)
-		case openProfile(UUID)
+		case openDetail(for: USID)
+		case openProfile(USID)
 	}
 
 	public var body: some ReducerOf<Self> {

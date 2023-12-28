@@ -2,7 +2,7 @@ import _ComposableArchitecture
 import CocoaExtensions
 import CombineExtensions
 import CombineNavigation
-import ProfileFeature
+import UserProfileFeature
 import TweetsFeedFeature
 
 @RoutingController
@@ -13,7 +13,7 @@ public final class FeedTabController: ComposableViewControllerOf<FeedTabFeature>
 	var feedControllers: [StackElementID: TweetsFeedController]
 
 	@ComposableStackDestination({ _ in .init(rootView: nil) })
-	var profileControllers: [StackElementID: ComposableHostingController<ProfileView>]
+	var profileControllers: [StackElementID: ComposableHostingController<UserProfileView>]
 
 	public override func viewDidLoad() {
 		super.viewDidLoad()

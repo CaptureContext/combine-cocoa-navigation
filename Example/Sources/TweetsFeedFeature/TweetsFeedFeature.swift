@@ -1,5 +1,6 @@
 import _ComposableArchitecture
-import Foundation
+import LocalExtensions
+import APIClient
 import TweetsListFeature
 import TweetDetailFeature
 
@@ -26,7 +27,7 @@ public struct TweetsFeedFeature {
 	public enum Action: Equatable {
 		case list(TweetsListFeature.Action)
 		case detail(PresentationAction<TweetDetailFeature.Action>)
-		case openProfile(UUID)
+		case openProfile(USID)
 	}
 
 	public var body: some ReducerOf<Self> {
@@ -36,11 +37,12 @@ public struct TweetsFeedFeature {
 				let .list(.tweets(.element(_, .openProfile(id)))),
 				let .detail(.presented(.openProfile(id))):
 				return .send(.openProfile(id))
-				
+
 			case let .list(.tweets(.element(itemID, .openDetail))):
-				state.detail = state.list.tweets[id: itemID].flatMap { tweet in
-					.collectMock(for: tweet.id)
-				}
+//				state.detail = state.list.tweets[id: itemID].flatMap { tweet in
+//					.collectMock(for: tweet.id)
+//				}
+				#warning("Not handled")
 				return .none
 				
 			default:

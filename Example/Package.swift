@@ -13,6 +13,10 @@ let package = Package(
 			branch: "observation-beta"
 		),
 		.package(
+			url: "https://github.com/pointfreeco/swift-dependencies.git",
+			.upToNextMajor(from: "1.0.0")
+		),
+		.package(
 			url: "https://github.com/capturecontext/swift-foundation-extensions.git",
 			.upToNextMinor(from: "0.4.0")
 		),
@@ -50,8 +54,8 @@ let package = Package(
 		// Ideally should be extracted to a separate `Dependencies` package
 		// See https://github.com/capturecontext/basic-ios-template
 		// - Can import targets from `Utils` section
+		// - Must not import targets from `Modules` section
 
-		// Meant to locally extend ComposableExtensions
 		.target(
 			name: "_ComposableArchitecture",
 			product: .library(.static),
@@ -65,17 +69,46 @@ let package = Package(
 			path: ._dependencies("_ComposableArchitecture")
 		),
 
+		.target(
+			name: "_Dependencies",
+			product: .library(.static),
+			dependencies: [
+				.localExtensions,
+				.product(
+					name: "Dependencies",
+					package: "swift-dependencies"
+				)
+			],
+			path: ._dependencies("_Dependencies")
+		),
+
 		// MARK: - Modules
 		// Application modules
+		// - Can import any targets from sections above
+		// - Should not import external dependencies directly
 		// - Feature modules have suffix `Feature`
-		// - Service and Model modules have no suffix
+		// - Service and Model modules have no specific suffix
+
+		.target(
+			name: "APIClient",
+			product: .library(.static),
+			dependencies: [
+				.target("AppModels"),
+				.target("DatabaseSchema"),
+				.dependency("_Dependencies"),
+				.localExtensions
+			]
+		),
 
 		.target(
 			name: "AppFeature",
 			product: .library(.static),
 			dependencies: [
+				.target("APIClient"),
 				.target("AppUI"),
+				.target("AuthFeature"),
 				.target("MainFeature"),
+				.target("OnboardingFeature"),
 				.dependency("_ComposableArchitecture"),
 				.localExtensions,
 			]
@@ -98,6 +131,15 @@ let package = Package(
 		),
 
 		.target(
+			name: "AuthFeature",
+			product: .library(.static),
+			dependencies: [
+				.dependency("_ComposableArchitecture"),
+				.localExtensions,
+			]
+		),
+
+		.target(
 			name: "CurrentUserProfileFeature",
 			product: .library(.static),
 			dependencies: [
@@ -110,9 +152,19 @@ let package = Package(
 		),
 
 		.target(
-			name: "FeedAndProfileFeature",
+			name: "DatabaseSchema",
 			product: .library(.static),
 			dependencies: [
+				.localExtensions
+			]
+		),
+
+		.target(
+			name: "ExternalUserProfileFeature",
+			product: .library(.static),
+			dependencies: [
+				.target("AppModels"),
+				.target("TweetsListFeature"),
 				.dependency("_ComposableArchitecture"),
 				.localExtensions,
 			]
@@ -122,7 +174,7 @@ let package = Package(
 			name: "FeedTabFeature",
 			product: .library(.static),
 			dependencies: [
-				.target("ProfileFeature"),
+				.target("UserProfileFeature"),
 				.target("TweetsFeedFeature"),
 				.dependency("_ComposableArchitecture"),
 				.localExtensions,
@@ -141,11 +193,20 @@ let package = Package(
 		),
 
 		.target(
-			name: "ProfileFeature",
+			name: "OnboardingFeature",
 			product: .library(.static),
 			dependencies: [
+				.dependency("_ComposableArchitecture"),
+				.localExtensions,
+			]
+		),
+
+		.target(
+			name: "ProfileAndFeedPivot",
+			product: .library(.static),
+			dependencies: [
+				.target("TweetsFeedFeature"),
 				.target("UserProfileFeature"),
-				.target("CurrentUserProfileFeature"),
 				.dependency("_ComposableArchitecture"),
 				.localExtensions,
 			]
@@ -168,6 +229,7 @@ let package = Package(
 				.target("AppModels"),
 				.target("TweetsFeedFeature"),
 				.target("UserProfileFeature"),
+				.target("ProfileAndFeedPivot"),
 				.dependency("_ComposableArchitecture"),
 				.localExtensions,
 			]
@@ -219,8 +281,8 @@ let package = Package(
 			name: "UserProfileFeature",
 			product: .library(.static),
 			dependencies: [
-				.target("AppModels"),
-				.target("TweetsListFeature"),
+				.target("CurrentUserProfileFeature"),
+				.target("ExternalUserProfileFeature"),
 				.dependency("_ComposableArchitecture"),
 				.localExtensions,
 			]

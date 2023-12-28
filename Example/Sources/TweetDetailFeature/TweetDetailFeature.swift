@@ -1,8 +1,9 @@
 import _ComposableArchitecture
-import Foundation
+import LocalExtensions
 import AppModels
 import TweetFeature
 import TweetsListFeature
+import APIClient
 
 @Reducer
 public struct TweetDetailFeature {
@@ -25,31 +26,17 @@ public struct TweetDetailFeature {
 			self.replies = replies
 			self.detail = detail
 		}
-
-		public static func collectMock(
-		 for id: UUID
-	 ) -> Self? {
-		 TweetModel.mockTweets[id: id].map { source in
-			 return .init(
-				 source: .mock(model: source),
-				 replies: .init(
-					tweets: IdentifiedArray(
-						uncheckedUniqueElements: TweetModel
-							.mockReplies(for: source.id)
-							.map { .mock(model: $0) }
-					)
-				 )
-			 )
-		 }
-	 }
 	}
 
 	public enum Action: Equatable {
 		case source(TweetFeature.Action)
 		case replies(TweetsListFeature.Action)
 		case detail(PresentationAction<Action>)
-		case openProfile(UUID)
+		case openProfile(USID)
 	}
+
+	@Dependency(\.apiClient)
+	var apiClient
 
 	public var body: some ReducerOf<Self> {
 		CombineReducers {
@@ -62,8 +49,7 @@ public struct TweetDetailFeature {
 					return .send(.openProfile(id))
 
 				case let .replies(.openDetail(id)):
-					state.detail = .collectMock(for: id)
-
+					#warning("Not handled")
 					return .none
 
 				default:

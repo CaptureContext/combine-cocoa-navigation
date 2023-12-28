@@ -1,7 +1,8 @@
 import _ComposableArchitecture
 import SwiftUI
 import AppModels
-import TweetsListFeature
+import ExternalUserProfileFeature
+import CurrentUserProfileFeature
 
 public struct UserProfileView: ComposableView {
 	let store: StoreOf<UserProfileFeature>
@@ -11,33 +12,19 @@ public struct UserProfileView: ComposableView {
 	}
 
 	public var body: some View {
-		ScrollView(.vertical) {
-			headerView
-				.padding(.vertical, 32)
-			Divider()
-				.padding(.bottom, 32)
-			TweetsListView(store.scope(
-				state: \.tweetsList,
-				action: \.tweetsList
-			))
-		}
-	}
-
-	@ViewBuilder
-	var headerView: some View {
-		VStack(spacing: 24) {
-			Circle()
-				.fill(Color(.label).opacity(0.3))
-				.frame(width: 86, height: 86)
-				.onTapGesture {
-					store.send(.tapOnAvatar)
-				}
-			Text("@" + store.model.user.username.lowercased())
-				.monospaced()
-				.bold()
-			Button(action: { store.send(.tapFollow) }) {
-				Text(store.model.isFollowedByYou ? "Unfollow" : "Follow")
-			}
+		switch store.state {
+		case .external:
+			store.scope(
+				state: \.external,
+				action: \.external
+			)
+			.map(ExternalUserProfileView.init)
+		case .current:
+			store.scope(
+				state: \.current,
+				action: \.current
+			)
+			.map(CurrentUserProfileView.init)
 		}
 	}
 }
@@ -45,7 +32,7 @@ public struct UserProfileView: ComposableView {
 #Preview {
 	NavigationStack {
 		UserProfileView(Store(
-			initialState: .init(
+			initialState: .external(.init(
 				model: .mock(),
 				tweetsList: .init(tweets: [
 					.mock(),
@@ -54,7 +41,7 @@ public struct UserProfileView: ComposableView {
 					.mock(),
 					.mock()
 				])
-			),
+			)),
 			reducer: UserProfileFeature.init
 		))
 	}

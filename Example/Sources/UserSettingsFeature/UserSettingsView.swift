@@ -9,7 +9,7 @@ public struct UserSettingsView: ComposableView {
 	}
 
 	public var body: some View {
-		Text(store.id.uuidString)
+		Text(store.id.usidString)
 	}
 }
 

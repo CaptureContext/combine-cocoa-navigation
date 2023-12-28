@@ -1,7 +1,7 @@
 import LocalExtensions
 
 public struct FollowerModel: Equatable, Identifiable {
-	public var id: UUID { user.id }
+	public var id: USID { user.id }
 	public var user: UserModel
 	public var isFollowingYou: Bool
 	public var isFollowedByYou: Bool

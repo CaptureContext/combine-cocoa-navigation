@@ -1,5 +1,5 @@
 import _ComposableArchitecture
-import ProfileFeature
+import UserProfileFeature
 import TweetsFeedFeature
 
 @Reducer
@@ -10,12 +10,12 @@ public struct FeedTabFeature {
 	public struct Path {
 		public enum State: Equatable {
 			case feed(TweetsFeedFeature.State)
-			case profile(ProfileFeature.State)
+			case profile(UserProfileFeature.State)
 		}
 
 		public enum Action: Equatable {
 			case feed(TweetsFeedFeature.Action)
-			case profile(ProfileFeature.Action)
+			case profile(UserProfileFeature.Action)
 		}
 
 		public var body: some ReducerOf<Self> {
@@ -27,7 +27,7 @@ public struct FeedTabFeature {
 			Scope(
 				state: /State.profile,
 				action: /Action.profile,
-				child: ProfileFeature.init
+				child: UserProfileFeature.init
 			)
 		}
 	}
@@ -63,26 +63,8 @@ public struct FeedTabFeature {
 				case 
 					let .feed(.openProfile(id)),
 					let .path(.element(_, action: .feed(.openProfile(id)))):
-					state.path.append(.profile(.user(.init(model: .mock(user: .mock(id: id))))))
+					state.path.append(.profile(.external(.init(model: .mock(user: .mock(id: id))))))
 					return .none
-
-				case let .path(.element(stackID, action: .profile(profile))):
-					switch profile {
-					case .user(.tweetsList(.tweets(.element(_, .tap)))):
-						guard case let .profile(.user(profile)) = state.path[id: stackID]
-						else { return .none }
-						state.path.append(.feed(.init(list: profile.tweetsList)))
-						return .none
-
-					case .currentUser(.tweetsList(.tweets(.element(_, .tap)))):
-						guard case let .profile(.currentUser(profile)) = state.path[id: stackID]
-						else { return .none }
-						state.path.append(.feed(.init(list: profile.tweetsList)))
-						return .none
-
-					default:
-						return .none
-					}
 
 				default:
 					return .none

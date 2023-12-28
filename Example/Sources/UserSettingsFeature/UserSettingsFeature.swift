@@ -1,5 +1,5 @@
 import _ComposableArchitecture
-import Foundation
+import LocalExtensions
 
 @Reducer
 public struct UserSettingsFeature {
@@ -7,10 +7,10 @@ public struct UserSettingsFeature {
 
 	@ObservableState
 	public struct State: Equatable, Identifiable {
-		public var id: UUID
+		public var id: USID
 
 		public init(
-			id: UUID
+			id: USID
 		) {
 			self.id = id
 		}

@@ -1,47 +1,54 @@
 import _ComposableArchitecture
+import AuthFeature
+import ProfileAndFeedPivot
 import UserProfileFeature
 import TweetsFeedFeature
+import CurrentUserProfileFeature
 
 @Reducer
 public struct ProfileTabFeature {
 	public init() {}
 
+	public typealias Path = ProfileAndFeedPivot
+
 	@Reducer
-	public struct Path: Reducer {
+	public struct Root {
 		@ObservableState
 		public enum State: Equatable {
-			case feed(TweetsFeedFeature.State)
-			case profile(UserProfileFeature.State)
+			case auth(AuthFeature.State = .signIn())
+			case profile(CurrentUserProfileFeature.State)
 		}
 
 		public enum Action: Equatable {
-			case feed(TweetsFeedFeature.Action)
-			case profile(UserProfileFeature.Action)
+			case auth(AuthFeature.Action)
+			case profile(CurrentUserProfileFeature.Action)
 		}
 
 		public var body: some ReducerOf<Self> {
 			Scope(
-				state: /State.feed,
-				action: /Action.feed,
-				child: TweetsFeedFeature.init
+				state: /State.auth,
+				action: /Action.auth,
+				child: AuthFeature.init
 			)
 			Scope(
 				state: /State.profile,
 				action: /Action.profile,
-				child: UserProfileFeature.init
+				child: CurrentUserProfileFeature.init
 			)
 		}
 	}
 
 	@ObservableState
 	public struct State: Equatable {
+		public var root: Root.State
 		public var path: StackState<Path.State>
 
 		public init(
-			root: UserProfileFeature.State,
+			root: Root.State = .auth(),
 			path: StackState<Path.State> = .init()
 		) {
-			self.path = [.profile(root)] + path
+			self.root = root
+			self.path = path
 		}
 	}
 
@@ -54,15 +61,15 @@ public struct ProfileTabFeature {
 		Reduce { state, action in
 			switch action {
 			case let .path(.element(_, action: .feed(.openProfile(id)))):
-				state.path.append(.profile(.init(model: .mock(user: .mock(id: id)))))
+				state.path.append(.profile(.external(.init(model: .mock(user: .mock(id: id))))))
 				return .none
 
-			case let .path(.element(stackID, .profile(.tweetsList(.tweets(.element(_, .tap)))))):
-				guard case let .profile(profile) = state.path[id: stackID]
-				else { return .none }
-
-				state.path.append(.feed(.init(list: profile.tweetsList)))
-				return .none
+//			case let .path(.element(stackID, .profile(.user(.tweetsList(.tweets(.element(_, .tap))))))):
+//				guard case let .profile(.external(profile)) = state.path[id: stackID]
+//				else { return .none }
+//
+//				state.path.append(.feed(.init(list: profile.tweetsList)))
+//				return .none
 
 			default:
 				return .none
