@@ -9,14 +9,14 @@ public struct ExternalUserProfileFeature {
 
 	@ObservableState
 	public struct State: Equatable {
-		public var model: FollowerModel
+		public var model: UserInfoModel
 		public var tweetsList: TweetsListFeature.State
 
 		@Presents
 		public var avatarPreview: URL?
 
 		public init(
-			model: FollowerModel,
+			model: UserInfoModel,
 			tweetsList: TweetsListFeature.State = .init()
 		) {
 			self.model = model
@@ -37,7 +37,7 @@ public struct ExternalUserProfileFeature {
 		Reduce { state, action in
 			switch action {
 			case .tapOnAvatar:
-				state.avatarPreview = state.model.user.avatarURL
+				state.avatarPreview = state.model.avatarURL
 				return .none
 
 			case .tapFollow:

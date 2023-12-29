@@ -15,11 +15,17 @@ import LocalExtensions
 public class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 	public var window: UIWindow?
 
+	@Dependency(\.database)
+	var database
+
 	@Dependency(\.apiClient)
 	var apiClient
 
-	func prefillDatabase() {
-			apiClient._accessDatabase { database in
+	func setupStore(_ callback: @escaping (StoreOf<MainFeature>) -> Void) {
+		Task<Void, Never> { @MainActor in
+			do {
+				let modelContext = await database.context
+
 				let currentUser = DatabaseSchema.UserModel(
 					id: USID(),
 					username: "capturecontext",
@@ -29,18 +35,27 @@ public class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 				let tweet = DatabaseSchema.TweetModel(
 					id: USID(),
 					author: currentUser,
-					content: "Hello, World!"
+					content: "Hello, First World!"
 				)
 
-				database.insert(tweet)
+				let reply1 = DatabaseSchema.TweetModel(
+					id: USID(),
+					author: currentUser,
+					replySource: tweet,
+					content: "Hello, Second World!"
+				)
 
-				try! database.save()
-			}
-	}
+				let reply2 = DatabaseSchema.TweetModel(
+					id: USID(),
+					author: currentUser,
+					replySource: reply1,
+					content: "Hello, Third World!"
+				)
 
-	func setupStore(_ callback: @escaping (StoreOf<MainFeature>) -> Void) {
-		Task<Void, Never> { @MainActor in
-			do {
+				modelContext.insert(reply2)
+
+				try! modelContext.save()
+
 				_ = try await self.apiClient.auth.signIn(username: "capturecontext", password: "psswrd").get()
 				let tweets = try await self.apiClient.feed.fetchTweets(page: 0, limit: 3).get()
 
@@ -51,8 +66,7 @@ public class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 								list: .init(
 									tweets: .init(
 										uncheckedUniqueElements:
-											//	TweetModel.mockTweets.filter(\.replyTo.isNil).map { .mock(model: $0) }
-										tweets.map { .mock(model: $0) }
+											tweets.map { $0.convert(to: .tweetFeature) }
 									)
 								)
 							)
@@ -61,7 +75,8 @@ public class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 						selectedTab: .feed
 					),
 					reducer: {
-						MainFeature()._printChanges()
+						MainFeature()
+							._printChanges()
 					}
 				))
 			} catch {
@@ -79,8 +94,6 @@ public class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 	) {
 		guard let scene = scene as? UIWindowScene else { return }
 		let controller = MainViewController()
-
-		prefillDatabase()
 
 		setupStore { store in
 			self.store = store

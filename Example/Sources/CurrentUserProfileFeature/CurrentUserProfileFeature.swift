@@ -37,14 +37,14 @@ public struct CurrentUserProfileFeature {
 
 	@ObservableState
 	public struct State: Equatable {
-		public var model: UserModel
+		public var model: UserInfoModel
 		public var tweetsList: TweetsListFeature.State
 
 		@Presents
 		public var destination: Destination.State?
 
 		public init(
-			model: UserModel,
+			model: UserInfoModel,
 			tweetsList: TweetsListFeature.State = .init(),
 			destination: Destination.State? = nil
 		) {

@@ -5,7 +5,7 @@ extension DatabaseSchema.V1 {
 	@Model
 	public final class TweetModel: Equatable, Identifiable, Sendable {
 		@Attribute(.unique)
-		public var id: String
+		public let id: String
 		public var createdAt: Date
 
 		@Relationship(inverse: \UserModel.tweets)

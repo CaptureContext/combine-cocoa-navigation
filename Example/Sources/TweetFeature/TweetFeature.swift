@@ -8,6 +8,23 @@ public struct TweetFeature {
 
 	@ObservableState
 	public struct State: Equatable, Identifiable {
+		@ObservableState
+		public struct AuthorState: Equatable {
+			public var id: USID
+			public var avatarURL: URL?
+			public var username: String
+
+			public init(
+				id: USID,
+				avatarURL: URL? = nil,
+				username: String
+			) {
+				self.id = id
+				self.avatarURL = avatarURL
+				self.username = username
+			}
+		}
+
 		public var id: USID
 		public var replyTo: USID?
 		public var repliesCount: Int
@@ -15,7 +32,7 @@ public struct TweetFeature {
 		public var likesCount: Int
 		public var isReposted: Bool
 		public var repostsCount: Int
-		public var author: UserModel
+		public var author: AuthorState
 		public var text: String
 
 		public init(
@@ -26,7 +43,7 @@ public struct TweetFeature {
 			likesCount: Int = 0,
 			isReposted: Bool = false,
 			repostsCount: Int = 0,
-			author: UserModel,
+			author: AuthorState,
 			text: String
 		) {
 			self.id = id
@@ -39,52 +56,6 @@ public struct TweetFeature {
 			self.author = author
 			self.text = text
 		}
-
-		public static func mock(
-		 model: TweetModel
-	 ) -> Self {
-		 .mock(
-			 id: model.id,
-			 replyTo: model.replyTo,
-			 author: .mock(id: model.authorID),
-			 text: model.text
-		 )
-	 }
-
-	 public static func mock(
-		 id: USID = .init(),
-		 replyTo: USID? = nil,
-		 author: UserModel = .mock(),
-		 text: String = """
-		 Nisi commodo non ea consequat qui ad pariatur dolore elit ipsum laboris ipsum. \
-		 Culpa anim incididunt sunt minim ut eiusmod nulla mollit minim qui. \
-		 In ad laboris labore irure ea ea officia.
-		 """
-		) -> Self {
-		 .init(
-			 id: id,
-			 replyTo: replyTo,
-			 author: author,
-			 text: text
-		 )
-	 }
-
-	 public func mockReply(
-		 id: USID = .init(),
-		 author: UserModel = .mock(),
-		 text: String = """
-		 Nisi commodo non ea consequat qui ad pariatur dolore elit ipsum laboris ipsum. \
-		 Culpa anim incididunt sunt minim ut eiusmod nulla mollit minim qui. \
-		 In ad laboris labore irure ea ea officia.
-		 """
-		) -> Self {
-		 .init(
-			 id: id,
-			 replyTo: self.id,
-			 author: author,
-			 text: text
-		 )
-	 }
 	}
 
 	public enum Action: Equatable {
@@ -108,5 +79,31 @@ public struct TweetFeature {
 		default:
 			return .none
 		}
+	}
+}
+
+extension Convertion where From == TweetModel, To == TweetFeature.State {
+	public static var tweetFeature: Convertion {
+		return .init { .init(
+			id: $0.id,
+			replyTo: $0.replyTo,
+			repliesCount: $0.repliesCount,
+			isLiked: $0.isLiked,
+			likesCount: $0.likesCount,
+			isReposted: $0.isReposted,
+			repostsCount: $0.repostsCount,
+			author: $0.author.convert(to: .tweetFeature),
+			text: $0.text
+		)}
+	}
+}
+
+extension Convertion where From == TweetModel.AuthorModel, To == TweetFeature.State.AuthorState {
+	public static var tweetFeature: Convertion {
+		return .init { .init(
+			id: $0.id,
+			avatarURL: $0.avatarURL,
+			username: $0.username
+		)}
 	}
 }

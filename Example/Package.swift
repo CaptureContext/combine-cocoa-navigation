@@ -118,6 +118,7 @@ let package = Package(
 			name: "AppModels",
 			product: .library(.static),
 			dependencies: [
+				.dependency("_Dependencies"),
 				.localExtensions
 			]
 		),
@@ -239,6 +240,7 @@ let package = Package(
 			name: "TweetDetailFeature",
 			product: .library(.static),
 			dependencies: [
+				.target("APIClient"),
 				.target("TweetFeature"),
 				.target("TweetsListFeature"),
 				.dependency("_ComposableArchitecture"),

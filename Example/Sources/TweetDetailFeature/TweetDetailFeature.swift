@@ -33,6 +33,7 @@ public struct TweetDetailFeature {
 		case replies(TweetsListFeature.Action)
 		case detail(PresentationAction<Action>)
 		case openProfile(USID)
+		case openDetail(TweetDetailFeature.State)
 	}
 
 	@Dependency(\.apiClient)
@@ -49,7 +50,23 @@ public struct TweetDetailFeature {
 					return .send(.openProfile(id))
 
 				case let .replies(.openDetail(id)):
-					#warning("Not handled")
+					guard let selectedTweet = state.replies.tweets[id: id]
+					else { return .none }
+
+					return .run { send in
+						do {
+							let replies = try await apiClient.tweet.fetchReplies(for: id).get()
+							await send(.openDetail(.init(source: selectedTweet, replies: .init(
+								tweets: .init(uniqueElements: replies.map { $0.convert(to: .tweetFeature) }))
+							)))
+						} catch {
+							#warning("Error is not handled")
+							fatalError(error.localizedDescription)
+						}
+					}
+
+				case let .openDetail(detail):
+					state.detail = detail
 					return .none
 
 				default:

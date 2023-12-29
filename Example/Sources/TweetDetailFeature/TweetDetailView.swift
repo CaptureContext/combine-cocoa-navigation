@@ -39,10 +39,52 @@ public struct TweetDetailView: ComposableView {
 #Preview {
 	TweetDetailView(Store(
 		initialState: .init(
-			source: .mock(),
+			source: TweetFeature.State(
+				id: .init(),
+				replyTo: nil,
+				repliesCount: 3,
+				isLiked: true,
+				likesCount: 999,
+				isReposted: false,
+				repostsCount: 0,
+				author: .init(
+					id: .init(),
+					avatarURL: nil,
+					username: "capturecontext"
+				),
+				text: "Hello, World!"
+			),
 			replies: .init(tweets: [
-				.mock(),
-				.mock()
+				TweetFeature.State(
+					id: .init(),
+					replyTo: nil,
+					repliesCount: 12,
+					isLiked: true,
+					likesCount: 69,
+					isReposted: false,
+					repostsCount: 0,
+					author: .init(
+						id: .init(),
+						avatarURL: nil,
+						username: "capturecontext"
+					),
+					text: "Hello, First World!"
+				),
+				TweetFeature.State(
+					id: .init(),
+					replyTo: nil,
+					repliesCount: 0,
+					isLiked: true,
+					likesCount: 420,
+					isReposted: false,
+					repostsCount: 1,
+					author: .init(
+						id: .init(),
+						avatarURL: nil,
+						username: "capturecontext"
+					),
+					text: "Hello, Second World!"
+				)
 			])
 		),
 		reducer: TweetDetailFeature.init

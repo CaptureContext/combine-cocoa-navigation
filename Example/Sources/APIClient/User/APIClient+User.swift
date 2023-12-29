@@ -30,7 +30,7 @@ extension APIClient.User.Operations {
 	public struct Fetch {
 		public typealias Input = USID
 
-		public typealias Output = Result<UserModel, Error>
+		public typealias Output = Result<UserInfoModel, Error>
 
 		public typealias AsyncSignature = @Sendable (Input) async -> Output
 

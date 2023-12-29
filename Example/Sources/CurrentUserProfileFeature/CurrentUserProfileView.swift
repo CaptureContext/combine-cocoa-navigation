@@ -61,13 +61,34 @@ public struct CurrentUserProfileView: ComposableView {
 	NavigationStack {
 		CurrentUserProfileView(Store(
 			initialState: .init(
-				model: .mock(),
+				model: .init(
+					id: .init(),
+					username: "capturecontext",
+					displayName: "CaptureContext",
+					bio: "SwiftData kinda sucks",
+					avatarURL: nil,
+					isFollowingYou: false,
+					isFollowedByYou: false,
+					followsCount: 69,
+					followersCount: 1123927,
+					tweetsCount: 1
+				),
 				tweetsList: .init(tweets: [
-					.mock(),
-					.mock(),
-					.mock(),
-					.mock(),
-					.mock()
+					.init(
+						id: .init(),
+						replyTo: nil,
+						repliesCount: 3,
+						isLiked: true,
+						likesCount: 999,
+						isReposted: false,
+						repostsCount: 0,
+						author: .init(
+							id: .init(),
+							avatarURL: nil,
+							username: "capturecontext"
+						),
+						text: "Hello, World!"
+					)
 				])
 			),
 			reducer: CurrentUserProfileFeature.init

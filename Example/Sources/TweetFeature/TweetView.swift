@@ -38,7 +38,21 @@ public struct TweetView: ComposableView {
 
 #Preview {
 	TweetView(Store(
-		initialState: .mock(),
+		initialState: TweetFeature.State(
+			id: .init(),
+			replyTo: nil,
+			repliesCount: 3,
+			isLiked: true,
+			likesCount: 999,
+			isReposted: false,
+			repostsCount: 0,
+			author: .init(
+				id: .init(),
+				avatarURL: nil,
+				username: "capturecontext"
+			),
+			text: "Hello, World!"
+		),
 		reducer: TweetFeature.init
 	))
 }

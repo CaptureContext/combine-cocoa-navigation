@@ -3,9 +3,9 @@ import LocalExtensions
 
 extension DatabaseSchema.V1 {
 	@Model
-	public final class UserModel: Equatable, Identifiable, Sendable {
+	public final class UserModel: Equatable, Identifiable, @unchecked Sendable {
 		@Attribute(.unique)
-		public var id: String
+		public let id: String
 
 		@Attribute(.unique)
 		public var username: String

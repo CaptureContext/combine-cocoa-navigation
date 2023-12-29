@@ -1,5 +1,6 @@
 @_exported import SwiftData
 import Foundation
+import _Dependencies
 
 extension DatabaseSchema {
 	public typealias TweetModel = Current.TweetModel

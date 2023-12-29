@@ -28,7 +28,11 @@ public struct TweetsFeedFeature {
 		case list(TweetsListFeature.Action)
 		case detail(PresentationAction<TweetDetailFeature.Action>)
 		case openProfile(USID)
+		case openDetail(TweetDetailFeature.State)
 	}
+
+	@Dependency(\.apiClient)
+	var apiClient
 
 	public var body: some ReducerOf<Self> {
 		Reduce { state, action in
@@ -39,12 +43,27 @@ public struct TweetsFeedFeature {
 				return .send(.openProfile(id))
 
 			case let .list(.tweets(.element(itemID, .openDetail))):
-//				state.detail = state.list.tweets[id: itemID].flatMap { tweet in
-//					.collectMock(for: tweet.id)
-//				}
-				#warning("Not handled")
+				return .run { send in
+					do {
+						let tweet = try await apiClient.tweet.fetch(id: itemID).get()
+						let replies = try await apiClient.tweet.fetchReplies(for: itemID).get()
+
+						await send(.openDetail(.init(
+							source: tweet.convert(to: .tweetFeature),
+							replies: .init(tweets: .init(
+								uniqueElements: replies.map { $0.convert(to: .tweetFeature) }
+							))
+						)))
+					} catch {
+						#warning("Error is not handled")
+						fatalError("ErrorIsNotHandled: \(error.localizedDescription)")
+					}
+				}
+
+			case let .openDetail(detail):
+				state.detail = detail
 				return .none
-				
+
 			default:
 				return .none
 			}

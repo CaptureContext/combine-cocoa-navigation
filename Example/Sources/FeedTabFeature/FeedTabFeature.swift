@@ -63,7 +63,10 @@ public struct FeedTabFeature {
 				case 
 					let .feed(.openProfile(id)),
 					let .path(.element(_, action: .feed(.openProfile(id)))):
-					state.path.append(.profile(.external(.init(model: .mock(user: .mock(id: id))))))
+					state.path.append(.profile(.external(.init(model: .init(
+						id: id,
+						username: "\(id)"
+					)))))
 					return .none
 
 				default:

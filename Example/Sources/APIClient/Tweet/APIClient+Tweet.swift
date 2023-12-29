@@ -4,6 +4,7 @@ import AppModels
 extension APIClient {
 	public struct Tweet {
 		public init(
+			fetch: Operations.Fetch,
 			like: Operations.Like,
 			post: Operations.Post,
 			repost: Operations.Repost,
@@ -12,6 +13,7 @@ extension APIClient {
 			report: Operations.Report,
 			fetchReplies: Operations.FetchReplies
 		) {
+			self.fetch = fetch
 			self.like = like
 			self.post = post
 			self.repost = repost
@@ -21,6 +23,7 @@ extension APIClient {
 			self.fetchReplies = fetchReplies
 		}
 
+		public var fetch: Operations.Fetch
 		public var like: Operations.Like
 		public var post: Operations.Post
 		public var repost: Operations.Repost
@@ -36,6 +39,26 @@ extension APIClient.Tweet {
 }
 
 extension APIClient.Tweet.Operations {
+	public struct Fetch {
+		public typealias Input = USID
+
+		public typealias Output = Result<TweetModel, Error>
+
+		public typealias AsyncSignature = @Sendable (Input) async -> Output
+
+		public var asyncCall: AsyncSignature
+
+		public init(_ asyncCall: @escaping AsyncSignature) {
+			self.asyncCall = asyncCall
+		}
+
+		public func callAsFunction(
+			id: USID
+		) async -> Output {
+			await asyncCall(id)
+		}
+	}
+
 	public struct Like {
 		public typealias Input = (
 			id: USID,

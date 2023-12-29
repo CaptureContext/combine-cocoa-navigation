@@ -1,8 +1,24 @@
 import LocalExtensions
 
-public struct TweetModel: Equatable, Identifiable, Codable {
+public struct TweetModel: Equatable, Identifiable, Codable, ConvertibleModel {
+	public struct AuthorModel: Equatable, Identifiable, Codable, ConvertibleModel {
+		public var id: USID
+		public var avatarURL: URL?
+		public var username: String
+
+		public init(
+			id: USID,
+			avatarURL: URL? = nil,
+			username: String
+		) {
+			self.id = id
+			self.avatarURL = avatarURL
+			self.username = username
+		}
+	}
+
 	public var id: USID
-	public var authorID: USID
+	public var author: AuthorModel
 	public var replyTo: USID?
 	public var repliesCount: Int
 	public var isLiked: Bool
@@ -13,7 +29,7 @@ public struct TweetModel: Equatable, Identifiable, Codable {
 
 	public init(
 		id: USID,
-		authorID: USID,
+		author: AuthorModel,
 		replyTo: USID? = nil,
 		repliesCount: Int = 0,
 		isLiked: Bool = false,
@@ -23,7 +39,7 @@ public struct TweetModel: Equatable, Identifiable, Codable {
 		text: String
 	) {
 		self.id = id
-		self.authorID = authorID
+		self.author = author
 		self.replyTo = replyTo
 		self.repliesCount = repliesCount
 		self.isLiked = isLiked
@@ -32,35 +48,4 @@ public struct TweetModel: Equatable, Identifiable, Codable {
 		self.repostsCount = repostsCount
 		self.text = text
 	}
-}
-
-extension TweetModel {
-	public static func mock(
-		id: USID = .init(),
-		authorID: USID = UserModel.mock().id,
-		replyTo: USID? = nil,
-		text: String =  """
-		Nisi commodo non ea consequat qui ad pariatur dolore elit ipsum laboris ipsum. \
-		Culpa anim incididunt sunt minim ut eiusmod nulla mollit minim qui. \
-		In ad laboris labore irure ea ea officia.
-		"""
-	) -> TweetModel {
-		.init(
-			id: id,
-			authorID: authorID,
-			replyTo: replyTo,
-			text: text
-		)
-	}
-
-	public func withReplies(
-		@TweetModelsBuilder replies: (TweetModel) -> [TweetModel]
-	) -> [TweetModel] {
-		[self] + replies(self)
-	}
-}
-
-@resultBuilder
-public struct TweetModelsBuilder: ArrayBuilderProtocol {
-	public typealias Element = TweetModel
 }

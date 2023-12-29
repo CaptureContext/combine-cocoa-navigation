@@ -61,7 +61,10 @@ public struct ProfileTabFeature {
 		Reduce { state, action in
 			switch action {
 			case let .path(.element(_, action: .feed(.openProfile(id)))):
-				state.path.append(.profile(.external(.init(model: .mock(user: .mock(id: id))))))
+				state.path.append(.profile(.external(.init(model: .init(
+					 id: id,
+					 username: "\(id)"
+				 )))))
 				return .none
 
 //			case let .path(.element(stackID, .profile(.user(.tweetsList(.tweets(.element(_, .tap))))))):
