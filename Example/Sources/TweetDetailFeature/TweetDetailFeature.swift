@@ -156,8 +156,9 @@ public struct TweetDetailFeature {
 		.ifLet(
 			\State.$detail,
 			action: \.detail,
-			destination: { TweetDetailFeature() }
+			 destination: TweetDetailFeature.init
 		)
+		.syncTweetDetailSource(\.$detail, with: \.replies)
 	}
 
 	func makeAlert(for error: APIClient.Error) -> AlertState<Action.Alert> {
@@ -171,5 +172,18 @@ public struct TweetDetailFeature {
 				}
 			}
 		)
+	}
+}
+
+extension Reducer {
+	public func syncTweetDetailSource(
+		_ toTweetDetail: @escaping (State) -> PresentationState<TweetDetailFeature.State>,
+		with toTweetsListState: WritableKeyPath<State, TweetsListFeature.State>
+	) -> some ReducerOf<Self> {
+		onChange(of: { toTweetDetail($0).wrappedValue?.source }) { state, old, new in
+			guard let tweet = new else { return .none }
+			state[keyPath: toTweetsListState].tweets[id: tweet.id] = tweet
+			return .none
+		}
 	}
 }

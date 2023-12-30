@@ -133,6 +133,7 @@ public struct TweetsFeedFeature {
 			 action: \.detail,
 			 destination: TweetDetailFeature.init
 		)
+		.syncTweetDetailSource(\.$detail, with: \.list)
 
 		Scope(
 			state: \State.list,
