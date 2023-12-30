@@ -1,5 +1,6 @@
 import _Dependencies
 import LocalExtensions
+import Combine
 
 extension DependencyValues {
 	public var currentUser: CurrentUserIDContainer {
@@ -9,11 +10,19 @@ extension DependencyValues {
 }
 
 public struct CurrentUserIDContainer {
-	@Reference
-	public var id: USID?
+	private let _idSubject: CurrentValueSubject<USID?, Never>
+
+	public var id: USID? {
+		get { _idSubject.value }
+		nonmutating set { _idSubject.send(newValue) }
+	}
+
+	public var idPublisher: some Publisher<USID?, Never> {
+		return _idSubject
+	}
 
 	public init(id: USID? = nil) {
-		self.id = id
+		self._idSubject = .init(id)
 	}
 }
 

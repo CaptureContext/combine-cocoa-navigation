@@ -8,7 +8,7 @@ import ProfileTabFeature
 
 public final class MainViewController: ComposableTabBarControllerOf<MainFeature>, UITabBarControllerDelegate {
 	let feedTabController: FeedTabController = .init()
-	let profileTabController: UIViewController = .init()
+	let profileTabController: ProfileTabController = .init()
 
 	public override func _init() {
 		super._init()
@@ -38,10 +38,20 @@ public final class MainViewController: ComposableTabBarControllerOf<MainFeature>
 		)
 	}
 
+	public override func viewDidAppear(_ animated: Bool) {
+		super.viewDidAppear(animated)
+		self.store?.send(.event(.didAppear))
+	}
+
 	public override func scope(_ store: Store?) {
 		feedTabController.setStore(store?.scope(
 			state: \.feed,
 			action: \.feed
+		))
+
+		profileTabController.setStore(store?.scope(
+			state: \.profile,
+			action: \.profile
 		))
 	}
 

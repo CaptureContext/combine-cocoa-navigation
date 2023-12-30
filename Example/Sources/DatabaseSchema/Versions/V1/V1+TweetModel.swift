@@ -3,7 +3,7 @@ import LocalExtensions
 
 extension DatabaseSchema.V1 {
 	@Model
-	public final class TweetModel: Equatable, Identifiable, Sendable {
+	public final class TweetModel: Equatable, Identifiable, @unchecked Sendable {
 		@Attribute(.unique)
 		public let id: String
 		public var createdAt: Date

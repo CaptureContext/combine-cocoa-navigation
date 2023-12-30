@@ -27,10 +27,17 @@ public struct MainFeature {
 		}
 	}
 
+	@CasePathable
 	public enum Action: Equatable, BindableAction {
 		case feed(FeedTabFeature.Action)
 		case profile(ProfileTabFeature.Action)
 		case binding(BindingAction<State>)
+		case event(Event)
+
+		@CasePathable
+		public enum Event: Equatable {
+			case didAppear
+		}
 	}
 
 	public init() {}
