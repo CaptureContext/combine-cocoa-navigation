@@ -42,7 +42,7 @@ extension APIClient.Tweet.Operations {
 	public struct Fetch {
 		public typealias Input = USID
 
-		public typealias Output = Result<TweetModel, Error>
+		public typealias Output = Result<TweetModel, APIClient.Error>
 
 		public typealias AsyncSignature = @Sendable (Input) async -> Output
 
@@ -65,7 +65,7 @@ extension APIClient.Tweet.Operations {
 			value: Bool
 		)
 
-		public typealias Output = Result<Void, Error>
+		public typealias Output = Result<Void, APIClient.Error>
 
 		public typealias AsyncSignature = @Sendable (Input) async -> Output
 
@@ -89,7 +89,7 @@ extension APIClient.Tweet.Operations {
 			content: String
 		)
 
-		public typealias Output = Result<Void, Error>
+		public typealias Output = Result<Void, APIClient.Error>
 
 		public typealias AsyncSignature = @Sendable (Input) async -> Output
 
@@ -110,7 +110,7 @@ extension APIClient.Tweet.Operations {
 	public struct Delete {
 		public typealias Input = USID
 
-		public typealias Output = Result<Void, Error>
+		public typealias Output = Result<Void, APIClient.Error>
 
 		public typealias AsyncSignature = @Sendable (Input) async -> Output
 
@@ -130,7 +130,7 @@ extension APIClient.Tweet.Operations {
 	public struct Report {
 		public typealias Input = USID
 
-		public typealias Output = Result<Void, Error>
+		public typealias Output = Result<Void, APIClient.Error>
 
 		public typealias AsyncSignature = @Sendable (Input) async -> Output
 
@@ -153,7 +153,7 @@ extension APIClient.Tweet.Operations {
 			content: String
 		)
 
-		public typealias Output = Result<Void, Error>
+		public typealias Output = Result<Void, APIClient.Error>
 
 		public typealias AsyncSignature = @Sendable (Input) async -> Output
 
@@ -174,7 +174,7 @@ extension APIClient.Tweet.Operations {
 	public struct Post {
 		public typealias Input = String
 
-		public typealias Output = Result<Void, Error>
+		public typealias Output = Result<Void, APIClient.Error>
 
 		public typealias AsyncSignature = @Sendable (Input) async -> Output
 
@@ -198,7 +198,7 @@ extension APIClient.Tweet.Operations {
 			limit: Int
 		)
 
-		public typealias Output = Result<[TweetModel], Error>
+		public typealias Output = Result<[TweetModel], APIClient.Error>
 
 		public typealias AsyncSignature = @Sendable (Input) async -> Output
 

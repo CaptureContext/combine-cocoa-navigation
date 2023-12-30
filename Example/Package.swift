@@ -252,6 +252,7 @@ let package = Package(
 			name: "TweetFeature",
 			product: .library(.static),
 			dependencies: [
+				.target("AppUI"),
 				.target("AppModels"),
 				.dependency("_ComposableArchitecture"),
 				.localExtensions,

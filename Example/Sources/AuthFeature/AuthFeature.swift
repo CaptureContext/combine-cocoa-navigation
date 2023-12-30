@@ -8,6 +8,7 @@ public struct AuthFeature {
 		case signUp(SignUp.State = .init())
 	}
 
+	@CasePathable
 	public enum Action: Equatable {
 		case signIn(SignIn.Action)
 		case signUp(SignUp.Action)

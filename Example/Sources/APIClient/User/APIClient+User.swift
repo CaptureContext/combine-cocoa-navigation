@@ -30,7 +30,7 @@ extension APIClient.User.Operations {
 	public struct Fetch {
 		public typealias Input = USID
 
-		public typealias Output = Result<UserInfoModel, Error>
+		public typealias Output = Result<UserInfoModel, APIClient.Error>
 
 		public typealias AsyncSignature = @Sendable (Input) async -> Output
 
@@ -53,7 +53,7 @@ extension APIClient.User.Operations {
 			value: Bool
 		)
 
-		public typealias Output = Result<Void, Error>
+		public typealias Output = Result<Void, APIClient.Error>
 
 		public typealias AsyncSignature = @Sendable (Input) async -> Output
 
@@ -74,7 +74,7 @@ extension APIClient.User.Operations {
 	public struct Report {
 		public typealias Input = USID
 
-		public typealias Output = Result<Void, Error>
+		public typealias Output = Result<Void, APIClient.Error>
 
 		public typealias AsyncSignature = @Sendable (Input) async -> Output
 
@@ -98,7 +98,7 @@ extension APIClient.User.Operations {
 			limit: Int
 		)
 
-		public typealias Output = Result<[TweetModel], Error>
+		public typealias Output = Result<[TweetModel], APIClient.Error>
 
 		public typealias AsyncSignature = @Sendable (Input) async -> Output
 

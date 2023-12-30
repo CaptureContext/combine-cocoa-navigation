@@ -1,5 +1,5 @@
 import _ComposableArchitecture
-import Foundation
+import LocalExtensions
 import AppModels
 import TweetsListFeature
 import UserSettingsFeature
@@ -16,6 +16,7 @@ public struct CurrentUserProfileFeature {
 			case userSettings(UserSettingsFeature.State)
 		}
 
+		@CasePathable
 		public enum Action: Equatable {
 			case avatarPreivew(Never)
 			case userSettings(UserSettingsFeature.Action)
@@ -54,10 +55,17 @@ public struct CurrentUserProfileFeature {
 		}
 	}
 
+	@CasePathable
 	public enum Action: Equatable {
 		case destination(PresentationAction<Destination.Action>)
 		case tweetsList(TweetsListFeature.Action)
 		case tapOnAvatar
+		case delegate(Delegate)
+
+		@CasePathable
+		public enum Delegate: Equatable {
+			case openProfile(USID)
+		}
 	}
 
 	public var body: some ReducerOf<Self> {
@@ -78,6 +86,10 @@ public struct CurrentUserProfileFeature {
 			action: \.destination,
 			destination: Destination.init
 		)
+
+		Pullback(\.tweetsList.delegate.openProfile) { state, id in
+			return .send(.delegate(.openProfile(id)))
+		}
 
 		Scope(
 			state: \State.tweetsList,

@@ -30,7 +30,7 @@ extension APIClient.Auth.Operations {
 			password: String
 		)
 
-		public typealias Output = Result<Void, Error>
+		public typealias Output = Result<Void, APIClient.Error>
 
 		public typealias AsyncSignature = @Sendable (Input) async -> Output
 
@@ -54,7 +54,7 @@ extension APIClient.Auth.Operations {
 			password: String
 		)
 
-		public typealias Output = Result<Void, Error>
+		public typealias Output = Result<Void, APIClient.Error>
 
 		public typealias AsyncSignature = @Sendable (Input) async -> Output
 

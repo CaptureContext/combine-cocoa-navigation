@@ -22,7 +22,7 @@ extension APIClient.Feed.Operations {
 			limit: Int
 		)
 
-		public typealias Output = Result<[TweetModel], Error>
+		public typealias Output = Result<[TweetModel], APIClient.Error>
 
 		public typealias AsyncSignature = @Sendable (Input) async -> Output
 

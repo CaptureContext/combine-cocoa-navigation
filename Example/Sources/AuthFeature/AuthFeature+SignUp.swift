@@ -8,6 +8,7 @@ extension AuthFeature {
 			public init() {}
 		}
 
+		@CasePathable
 		public enum Action: Equatable {
 
 		}

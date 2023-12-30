@@ -19,6 +19,7 @@ public struct ProfileTabFeature {
 			case profile(CurrentUserProfileFeature.State)
 		}
 
+		@CasePathable
 		public enum Action: Equatable {
 			case auth(AuthFeature.Action)
 			case profile(CurrentUserProfileFeature.Action)
@@ -60,7 +61,7 @@ public struct ProfileTabFeature {
 	public var body: some ReducerOf<Self> {
 		Reduce { state, action in
 			switch action {
-			case let .path(.element(_, action: .feed(.openProfile(id)))):
+			case let .path(.element(_, action: .feed(.delegate(.openProfile(id))))):
 				state.path.append(.profile(.external(.init(model: .init(
 					 id: id,
 					 username: "\(id)"

@@ -15,20 +15,26 @@ public struct TweetsListFeature {
 		public var tweets: IdentifiedArrayOf<TweetFeature.State>
 	}
 
+	@CasePathable
 	public enum Action: Equatable {
 		case tweets(IdentifiedActionOf<TweetFeature>)
-		case openDetail(for: USID)
-		case openProfile(USID)
+		case delegate(Delegate)
+
+		@CasePathable
+		public enum Delegate: Equatable {
+			case openDetail(USID)
+			case openProfile(USID)
+		}
 	}
 
 	public var body: some ReducerOf<Self> {
 		Reduce { state, action in
 			switch action {
-			case let .tweets(.element(_, .openProfile(id))):
-				return .send(.openProfile(id))
+			case let .tweets(.element(id, .tap)):
+				return .send(.delegate(.openDetail(id)))
 
-			case let .tweets(.element(_, .openDetail(id))):
-				return .send(.openDetail(for: id))
+			case let .tweets(.element(id, .tapOnAuthor)):
+				return .send(.delegate(.openProfile(id)))
 
 			default:
 				return .none

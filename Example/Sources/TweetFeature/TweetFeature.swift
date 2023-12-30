@@ -1,6 +1,7 @@
 import _ComposableArchitecture
 import LocalExtensions
 import AppModels
+import APIClient
 
 @Reducer
 public struct TweetFeature {
@@ -12,20 +13,24 @@ public struct TweetFeature {
 		public struct AuthorState: Equatable {
 			public var id: USID
 			public var avatarURL: URL?
+			public var displayName: String
 			public var username: String
 
 			public init(
 				id: USID,
 				avatarURL: URL? = nil,
+				displayName: String = "",
 				username: String
 			) {
 				self.id = id
 				self.avatarURL = avatarURL
+				self.displayName = displayName
 				self.username = username
 			}
 		}
 
 		public var id: USID
+		public var createdAt: Date
 		public var replyTo: USID?
 		public var repliesCount: Int
 		public var isLiked: Bool
@@ -37,6 +42,7 @@ public struct TweetFeature {
 
 		public init(
 			id: USID,
+			createdAt: Date = .now,
 			replyTo: USID? = nil,
 			repliesCount: Int = 0,
 			isLiked: Bool = false,
@@ -47,6 +53,7 @@ public struct TweetFeature {
 			text: String
 		) {
 			self.id = id
+			self.createdAt = createdAt
 			self.replyTo = replyTo
 			self.repliesCount = repliesCount
 			self.isLiked = isLiked
@@ -58,27 +65,49 @@ public struct TweetFeature {
 		}
 	}
 
-	public enum Action: Equatable {
+	@CasePathable
+	public enum Action: Equatable, BindableAction {
 		case tap
 		case tapOnAuthor
-		case openDetail(for: USID)
-		case openProfile(USID)
+		case reply, toggleLike, repost, share
+		case binding(BindingAction<State>)
 	}
 
-	public func reduce(
-		into state: inout State,
-		action: Action
-	) -> Effect<Action> {
-		switch action {
-		case .tap:
-			return .send(.openDetail(for: state.id))
+	@Dependency(\.apiClient)
+	var apiClient
 
-		case .tapOnAuthor:
-			return.send(.openProfile(state.author.id))
+	public var body: some ReducerOf<Self> {
+		Reduce { state, action in
+			#warning("Cancel pending effects as needed")
+			switch action {
+			case .reply:
+				return .none
+			case .toggleLike:
+				let id = state.id
+				let newIsLiked = !state.isLiked
+				let oldLikesCount = state.likesCount
 
-		default:
-			return .none
+				state.isLiked = newIsLiked
+				state.likesCount += newIsLiked ? 1 : -1
+
+				return .run { send in
+					do { try await apiClient.tweet.like(id: id, value: newIsLiked).get() }
+					catch {
+						await send(.binding(.set(\.isLiked, !newIsLiked)))
+						await send(.binding(.set(\.likesCount, oldLikesCount)))
+					}
+				}
+			case .repost:
+				return .none
+
+			case .share:
+				return .none
+
+			default:
+				return .none
+			}
 		}
+		BindingReducer()
 	}
 }
 
@@ -86,6 +115,7 @@ extension Convertion where From == TweetModel, To == TweetFeature.State {
 	public static var tweetFeature: Convertion {
 		return .init { .init(
 			id: $0.id,
+			createdAt: $0.createdAt,
 			replyTo: $0.replyTo,
 			repliesCount: $0.repliesCount,
 			isLiked: $0.isLiked,
@@ -103,6 +133,7 @@ extension Convertion where From == TweetModel.AuthorModel, To == TweetFeature.St
 		return .init { .init(
 			id: $0.id,
 			avatarURL: $0.avatarURL,
+			displayName: $0.displayName,
 			username: $0.username
 		)}
 	}

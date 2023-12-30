@@ -24,34 +24,49 @@ public struct ExternalUserProfileFeature {
 		}
 	}
 
+	@CasePathable
 	public enum Action: Equatable {
 		case avatarPreview(PresentationAction<Never>)
 		case tweetsList(TweetsListFeature.Action)
-		case openDetail(for: USID)
-		case openProfile(USID)
 		case tapOnAvatar
 		case tapFollow
+		case delegate(Delegate)
+
+		@CasePathable
+		public enum Delegate: Equatable {
+			case openDetail(USID)
+			case openProfile(USID)
+		}
 	}
 
 	public var body: some ReducerOf<Self> {
-		Reduce { state, action in
-			switch action {
-			case .tapOnAvatar:
-				state.avatarPreview = state.model.avatarURL
-				return .none
+		CombineReducers {
+			Reduce { state, action in
+				switch action {
+				case .tapOnAvatar:
+					state.avatarPreview = state.model.avatarURL
+					return .none
 
-			case .tapFollow:
-				state.model.isFollowedByYou.toggle()
-				return .none
+				case .tapFollow:
+					state.model.isFollowedByYou.toggle()
+					return .none
 
-			case let .tweetsList(.tweets(.element(_, .openDetail(id)))):
-				return .send(.openDetail(for: id))
+				default:
+					return .none
+				}
+			}
+			Reduce { state, action in
+				switch action {
+				case let .tweetsList(.delegate(.openDetail(id))):
+					return .send(.delegate(.openDetail(id)))
 
-			case let .tweetsList(.tweets(.element(_, .openProfile(id)))):
-				return .send(.openProfile(id))
+				case let .tweetsList(.delegate(.openProfile(id))):
+					guard id != state.model.id else { return .none }
+					return .send(.delegate(.openProfile(id)))
 
-			default:
-				return .none
+				default:
+					return .none
+				}
 			}
 		}
 		.ifLet(

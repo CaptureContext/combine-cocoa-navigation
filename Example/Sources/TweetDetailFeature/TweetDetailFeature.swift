@@ -17,23 +17,49 @@ public struct TweetDetailFeature {
 		@Presents
 		public var detail: TweetDetailFeature.State?
 
+		@Presents
+		public var alert: AlertState<Action.Alert>?
+
 		public init(
 			source: TweetFeature.State,
-			replies: TweetsListFeature.State,
-			detail: TweetDetailFeature.State? = nil
+			replies: TweetsListFeature.State = .init(),
+			detail: TweetDetailFeature.State? = nil,
+			alert: AlertState<Action.Alert>? = nil
 		) {
 			self.source = source
 			self.replies = replies
 			self.detail = detail
+			self.alert = alert
 		}
 	}
 
+	@CasePathable
 	public enum Action: Equatable {
 		case source(TweetFeature.Action)
 		case replies(TweetsListFeature.Action)
 		case detail(PresentationAction<Action>)
-		case openProfile(USID)
-		case openDetail(TweetDetailFeature.State)
+		case fetchMoreReplies
+
+		case alert(Alert)
+		case delegate(Delegate)
+		case event(Event)
+
+		@CasePathable
+		public enum Delegate: Equatable {
+			case openProfile(USID)
+		}
+
+		@CasePathable
+		public enum Alert: Equatable {
+			case close
+			case didTapRecoveryOption(String)
+		}
+
+		@CasePathable
+		public enum Event: Equatable {
+			case didAppear
+			case didFetchReplies(Result<[TweetModel], APIClient.Error>)
+		}
 	}
 
 	@Dependency(\.apiClient)
@@ -43,34 +69,75 @@ public struct TweetDetailFeature {
 		CombineReducers {
 			Reduce { state, action in
 				switch action {
+				case .source(.tapOnAuthor):
+					return .send(.delegate(.openProfile(state.source.id)))
+
 				case
-					let .source(.openProfile(id)),
-					let .replies(.openProfile(id)),
-					let .detail(.presented(.openProfile(id))):
-					return .send(.openProfile(id))
-
-				case let .replies(.openDetail(id)):
-					guard let selectedTweet = state.replies.tweets[id: id]
-					else { return .none }
-
-					return .run { send in
-						do {
-							let replies = try await apiClient.tweet.fetchReplies(for: id).get()
-							await send(.openDetail(.init(source: selectedTweet, replies: .init(
-								tweets: .init(uniqueElements: replies.map { $0.convert(to: .tweetFeature) }))
-							)))
-						} catch {
-							#warning("Error is not handled")
-							fatalError(error.localizedDescription)
-						}
-					}
-
-				case let .openDetail(detail):
-					state.detail = detail
-					return .none
+					let .replies(.delegate(.openProfile(id))),
+					let .detail(.presented(.delegate(.openProfile(id)))):
+					return .send(.delegate(.openProfile(id)))
 
 				default:
 					return .none
+				}
+			}
+
+			Pullback(\.replies.delegate.openDetail) { state, id in
+				guard let tweet = state.replies.tweets[id: id]
+				else { return .none }
+
+				state.detail = .init(source: tweet)
+				return .none
+			}
+
+			Pullback(\.event.didAppear) { state in
+				return .send(.fetchMoreReplies)
+			}
+
+			Reduce { state, action in
+				switch action {
+				case .fetchMoreReplies:
+					let id = state.source.id
+					let repliesCount = state.replies.tweets.count
+					return .run { send in
+						await send(.event(.didFetchReplies(
+							apiClient.tweet.fetchReplies(
+								for: id,
+								page: repliesCount / 10,
+								limit: 10
+							)
+						)))
+					}
+
+				case let .event(.didFetchReplies(replies)):
+					switch replies {
+					case let .success(replies):
+						let tweets = replies.map { $0.convert(to: .tweetFeature) }
+						state.replies.tweets.append(contentsOf: tweets)
+						return .none
+
+					case let .failure(error):
+						state.alert = makeAlert(for: error)
+						return .none
+					}
+
+				default:
+					return .none
+				}
+			}
+
+			Reduce { state, action in
+				switch action {
+				case .alert(.close):
+					state.alert = nil
+					return .none
+
+				case let .alert(.didTapRecoveryOption(deeplink)):
+					#warning("TODO: Handle deeplink")
+					return .none
+
+				default:
+					 return .none
 				}
 			}
 
@@ -90,6 +157,19 @@ public struct TweetDetailFeature {
 			\State.$detail,
 			action: \.detail,
 			destination: { TweetDetailFeature() }
+		)
+	}
+
+	func makeAlert(for error: APIClient.Error) -> AlertState<Action.Alert> {
+		.init(
+			title: {
+				TextState(error.message)
+			},
+			actions: {
+				ButtonState(role: .cancel, action: .send(.close)) {
+					TextState("")
+				}
+			}
 		)
 	}
 }

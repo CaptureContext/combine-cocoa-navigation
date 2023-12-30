@@ -18,6 +18,7 @@ public struct ProfileFeedFeature {
 		}
 	}
 
+	@CasePathable
 	public enum Action: Equatable {
 		case tweets(IdentifiedActionOf<TweetFeature>)
 		case openProfile(USID)

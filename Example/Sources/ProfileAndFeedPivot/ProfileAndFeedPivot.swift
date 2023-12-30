@@ -10,6 +10,7 @@ public struct ProfileAndFeedPivot {
 		case profile(UserProfileFeature.State)
 	}
 
+	@CasePathable
 	public enum Action: Equatable {
 		case feed(TweetsFeedFeature.Action)
 		case profile(UserProfileFeature.Action)

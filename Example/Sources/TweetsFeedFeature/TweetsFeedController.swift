@@ -21,6 +21,11 @@ public final class TweetsFeedController: ComposableViewControllerOf<TweetsFeedFe
 		host.didMove(toParent: self)
 	}
 
+	public override func viewDidAppear(_ animated: Bool) {
+		super.viewDidAppear(animated)
+		self.store?.send(.event(.didAppear))
+	}
+
 	public override func scope(_ store: Store?) {
 		host.setStore(store?.scope(
 			state: \.list,

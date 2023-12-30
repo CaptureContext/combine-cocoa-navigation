@@ -1,6 +1,7 @@
 import _ComposableArchitecture
 import UserProfileFeature
 import TweetsFeedFeature
+import LocalExtensions
 
 @Reducer
 public struct FeedTabFeature {
@@ -13,12 +14,30 @@ public struct FeedTabFeature {
 			case profile(UserProfileFeature.State)
 		}
 
+		@CasePathable
 		public enum Action: Equatable {
 			case feed(TweetsFeedFeature.Action)
 			case profile(UserProfileFeature.Action)
+			case delegate(Delegate)
+
+			@CasePathable
+			public enum Delegate: Equatable {
+				case openProfile(USID)
+			}
 		}
 
 		public var body: some ReducerOf<Self> {
+			Reduce { state, action in
+				switch action {
+				case
+					let .feed(.delegate(.openProfile(id))),
+					let .profile(.delegate(.openProfile(id))):
+					return .send(.delegate(.openProfile(id)))
+
+				default:
+					return .none
+				}
+			}
 			Scope(
 				state: /State.feed,
 				action: /Action.feed,
@@ -46,6 +65,7 @@ public struct FeedTabFeature {
 		}
 	}
 
+	@CasePathable
 	public enum Action: Equatable {
 		case feed(TweetsFeedFeature.Action)
 		case path(StackAction<Path.State, Path.Action>)
@@ -61,8 +81,8 @@ public struct FeedTabFeature {
 			Reduce { state, action in
 				switch action {
 				case 
-					let .feed(.openProfile(id)),
-					let .path(.element(_, action: .feed(.openProfile(id)))):
+					let .feed(.delegate(.openProfile(id))),
+					let .path(.element(_, action: .delegate(.openProfile(id)))):
 					state.path.append(.profile(.external(.init(model: .init(
 						id: id,
 						username: "\(id)"
@@ -73,11 +93,11 @@ public struct FeedTabFeature {
 					return .none
 				}
 			}
-				.forEach(
-					\State.path,
-					 action: \.path,
-					 destination: Path.init
-				)
+			.forEach(
+				\State.path,
+				 action: \.path,
+				 destination: Path.init
+			)
 		}
 	}
 }

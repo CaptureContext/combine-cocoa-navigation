@@ -16,6 +16,7 @@ public struct UserSettingsFeature {
 		}
 	}
 
+	@CasePathable
 	public enum Action: Equatable {}
 
 	public var body: some ReducerOf<Self> {

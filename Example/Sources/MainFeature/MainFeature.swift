@@ -7,8 +7,8 @@ public struct MainFeature {
 	@ObservableState
 	public struct State: Equatable {
 		public init(
-			feed: FeedTabFeature.State,
-			profile: ProfileTabFeature.State,
+			feed: FeedTabFeature.State = .init(),
+			profile: ProfileTabFeature.State = .init(),
 			selectedTab: Tab = .feed
 		) {
 			self.feed = feed
