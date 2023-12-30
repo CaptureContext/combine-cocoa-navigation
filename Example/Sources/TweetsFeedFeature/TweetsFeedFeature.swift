@@ -81,7 +81,10 @@ public struct TweetsFeedFeature {
 			}
 
 			Pullback(\.event.didAppear) { state in
-				return .send(.fetchMoreTweets)
+				return .run { send in
+					try await Task.sleep(nanoseconds: 2_500_000_000)
+					await send(.fetchMoreTweets)
+				}
 			}
 
 			Reduce { state, action in
@@ -101,6 +104,7 @@ public struct TweetsFeedFeature {
 					case let .success(tweets):
 						let tweets = tweets.map { $0.convert(to: .tweetFeature) }
 						state.list.tweets.append(contentsOf: tweets)
+						state.list.placeholder = .text()
 						return .none
 						
 					case let .failure(error):

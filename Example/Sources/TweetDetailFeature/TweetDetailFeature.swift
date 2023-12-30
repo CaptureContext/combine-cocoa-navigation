@@ -114,6 +114,7 @@ public struct TweetDetailFeature {
 					case let .success(replies):
 						let tweets = replies.map { $0.convert(to: .tweetFeature) }
 						state.replies.tweets.append(contentsOf: tweets)
+						state.replies.placeholder = .text()
 						return .none
 
 					case let .failure(error):

@@ -8,11 +8,22 @@ public struct TweetsListFeature {
 
 	@ObservableState
 	public struct State: Equatable {
-		public init(tweets: IdentifiedArrayOf<TweetFeature.State> = []) {
+		@ObservableState
+		public enum Placeholder: Equatable {
+			case text(String = "Nothing here yet 😢")
+			case activityIndicator
+		}
+
+		public init(
+			tweets: IdentifiedArrayOf<TweetFeature.State> = [],
+			placeholder: Placeholder? = .activityIndicator
+		) {
 			self.tweets = tweets
+			self.placeholder = placeholder
 		}
 
 		public var tweets: IdentifiedArrayOf<TweetFeature.State>
+		public var placeholder: Placeholder?
 	}
 
 	@CasePathable

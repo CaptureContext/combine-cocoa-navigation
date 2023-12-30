@@ -10,16 +10,28 @@ public struct TweetsListView: ComposableView {
 	}
 
 	public var body: some View {
-		ScrollView(.vertical) {
-			LazyVStack(spacing: 24) {
-				ForEachStore(
-					store.scope(
-						state: \.tweets,
-						action: \.tweets
-					),
-					content: TweetView.init
-				)
+		if store.tweets.isNotEmpty {
+			ScrollView(.vertical) {
+				LazyVStack(spacing: 24) {
+					ForEach(store.tweets) { tweet in
+						if let store = store.scope(state: \.tweets[id: tweet.id], action: \.tweets[id: tweet.id]) {
+							TweetView(store)
+						}
+					}
+				}
 			}
+		} else {
+			ZStack {
+				switch store.placeholder {
+				case let .text(text):
+					Text(text)
+				case .activityIndicator:
+					ProgressView()
+				case .none:
+					EmptyView()
+				}
+			}
+			.frame(maxWidth: .infinity, maxHeight: .infinity)
 		}
 	}
 }
