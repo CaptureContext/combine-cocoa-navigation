@@ -71,7 +71,7 @@ open class StackDestination<
 	) -> Controller {
 		if
 			let controllerType = (Controller.self as? DestinationInitializableControllerProtocol.Type),
-			let controller = controllerType.init() as? Controller
+			let controller = controllerType._init_for_destination() as? Controller
 		{
 			return controller
 		} else {

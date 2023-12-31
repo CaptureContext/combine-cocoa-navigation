@@ -3,6 +3,6 @@ import SwiftUI
 import CocoaAliases
 
 public protocol DestinationInitializableControllerProtocol: CocoaViewController {
-	init()
+	static func _init_for_destination() -> CocoaViewController
 }
 #endif
