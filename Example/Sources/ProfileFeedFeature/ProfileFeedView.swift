@@ -24,20 +24,3 @@ public struct ProfileFeedView: ComposableView {
 		}
 	}
 }
-
-#Preview {
-	NavigationStack {
-		ProfileFeedView(Store(
-			initialState: .init(
-				tweets: [
-					.mock(),
-					.mock(),
-					.mock(),
-					.mock(),
-					.mock()
-				]
-			),
-			reducer: ProfileFeedFeature.init
-		))
-	}
-}

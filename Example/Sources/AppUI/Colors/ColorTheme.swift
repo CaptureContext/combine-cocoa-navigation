@@ -58,7 +58,9 @@ public struct ColorTheme {
 }
 
 extension ColorTheme {
+	#warning("Find a way to update current value for SUI and Cocoa")
 	public static var current: ColorTheme {
+		// Won't be updated in Cocoa
 		Environment(\.colorTheme).wrappedValue
 	}
 

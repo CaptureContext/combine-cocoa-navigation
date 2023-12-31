@@ -5,13 +5,17 @@ import Combine
 import CombineExtensions
 import Capture
 import CombineNavigation
+import TweetReplyFeature
 
 @RoutingController
 public final class TweetDetailController: ComposableViewControllerOf<TweetDetailFeature> {
-	let host = ComposableHostingController<TweetDetailView>(rootView: nil)
+	let host = ComposableHostingController<TweetDetailView>()
 
 	@ComposableTreeDestination
 	var detailController: TweetDetailController?
+
+	@ComposableViewTreeDestination<TweetReplyView>
+	var tweetReplyController
 
 	public override func viewDidLoad() {
 		super.viewDidLoad()
@@ -30,9 +34,15 @@ public final class TweetDetailController: ComposableViewControllerOf<TweetDetail
 	public override func scope(_ store: Store?) {
 		host.setStore(store)
 
+		#warning("Use present")
+		_tweetReplyController.setStore(store?.scope(
+			state: \.destination?.tweetReply,
+			action: \.destination.presented.tweetReply
+		))
+
 		_detailController.setStore(store?.scope(
-			state: \.detail,
-			action: \.detail.presented
+			state: \.destination?.detail,
+			action: \.destination.presented.detail
 		))
 	}
 
@@ -41,9 +51,16 @@ public final class TweetDetailController: ComposableViewControllerOf<TweetDetail
 		into cancellables: inout Set<AnyCancellable>
 	) {
 		navigationDestination(
-			isPresented: \.detail.isNotNil,
-			destination: $detailController,
-			popAction: .detail(.dismiss)
+			state: \State.$destination,
+			switch: { destinations, route in
+				switch route {
+				case .tweetReply:
+					destinations.$tweetReplyController
+				case .detail:
+					destinations.$detailController
+				}
+			},
+			popAction: .destination(.dismiss)
 		)
 		.store(in: &cancellables)
 	}

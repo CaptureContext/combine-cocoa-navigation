@@ -9,11 +9,11 @@ import TweetsFeedFeature
 public final class FeedTabController: ComposableViewControllerOf<FeedTabFeature> {
 	let contentController: TweetsFeedController = .init()
 
-	@ComposableStackDestination
-	var feedControllers: [StackElementID: TweetsFeedController]
+	@ComposableStackDestination<TweetsFeedController>
+	var feedControllers
 
-	@ComposableStackDestination({ _ in .init(rootView: nil) })
-	var profileControllers: [StackElementID: ComposableHostingController<UserProfileView>]
+	@ComposableViewStackDestination<UserProfileView>
+	var profileControllers
 
 	public override func viewDidLoad() {
 		super.viewDidLoad()

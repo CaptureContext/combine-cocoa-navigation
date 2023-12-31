@@ -4,10 +4,39 @@ import AppModels
 import TweetFeature
 import TweetsListFeature
 import APIClient
+import TweetReplyFeature
 
 @Reducer
 public struct TweetDetailFeature {
 	public init() {}
+
+	@Reducer
+	public struct Destination {
+		@ObservableState
+		public enum State: Equatable {
+			case detail(TweetDetailFeature.State)
+			case tweetReply(TweetReplyFeature.State)
+		}
+
+		@CasePathable
+		public enum Action: Equatable {
+			case detail(TweetDetailFeature.Action)
+			case tweetReply(TweetReplyFeature.Action)
+		}
+
+		public var body: some ReducerOf<Self> {
+			Scope(
+				state: \.detail,
+				action: \.detail,
+				child: TweetDetailFeature.init
+			)
+			Scope(
+				state: \.tweetReply,
+				action: \.tweetReply,
+				child: TweetReplyFeature.init
+			)
+		}
+	}
 
 	@ObservableState
 	public struct State: Equatable {
@@ -15,7 +44,7 @@ public struct TweetDetailFeature {
 		public var replies: TweetsListFeature.State
 
 		@Presents
-		public var detail: TweetDetailFeature.State?
+		public var destination: Destination.State?
 
 		@Presents
 		public var alert: AlertState<Action.Alert>?
@@ -23,12 +52,12 @@ public struct TweetDetailFeature {
 		public init(
 			source: TweetFeature.State,
 			replies: TweetsListFeature.State = .init(),
-			detail: TweetDetailFeature.State? = nil,
+			destination: Destination.State? = nil,
 			alert: AlertState<Action.Alert>? = nil
 		) {
 			self.source = source
 			self.replies = replies
-			self.detail = detail
+			self.destination = destination
 			self.alert = alert
 		}
 	}
@@ -37,7 +66,7 @@ public struct TweetDetailFeature {
 	public enum Action: Equatable {
 		case source(TweetFeature.Action)
 		case replies(TweetsListFeature.Action)
-		case detail(PresentationAction<Action>)
+		case destination(PresentationAction<Destination.Action>)
 		case fetchMoreReplies
 
 		case alert(Alert)
@@ -74,8 +103,24 @@ public struct TweetDetailFeature {
 
 				case
 					let .replies(.delegate(.openProfile(id))),
-					let .detail(.presented(.delegate(.openProfile(id)))):
+					let .destination(.presented(.detail(.delegate(.openProfile(id))))):
 					return .send(.delegate(.openProfile(id)))
+
+				default:
+					return .none
+				}
+			}
+
+			Reduce { state, action in
+				switch action {
+				case .source(.reply):
+					state.destination = .tweetReply(.init(source: state.source, replyText: ""))
+					return .none
+
+				case let .replies(.tweets(.element(id, .reply))):
+					guard let tweet = state.replies.tweets[id: id] else { return .none }
+					state.destination = .tweetReply(.init(source: tweet, replyText: ""))
+					return .none
 
 				default:
 					return .none
@@ -86,7 +131,7 @@ public struct TweetDetailFeature {
 				guard let tweet = state.replies.tweets[id: id]
 				else { return .none }
 
-				state.detail = .init(source: tweet)
+				state.destination = .detail(.init(source: tweet))
 				return .none
 			}
 
@@ -155,11 +200,11 @@ public struct TweetDetailFeature {
 			)
 		}
 		.ifLet(
-			\State.$detail,
-			action: \.detail,
-			 destination: TweetDetailFeature.init
+			\State.$destination,
+			action: \.destination,
+			 destination: Destination.init
 		)
-		.syncTweetDetailSource(\.$detail, with: \.replies)
+		.syncTweetDetailSource(\.$destination.detail, with: \.replies)
 	}
 
 	func makeAlert(for error: APIClient.Error) -> AlertState<Action.Alert> {

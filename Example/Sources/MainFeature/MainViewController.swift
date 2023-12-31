@@ -13,26 +13,33 @@ public final class MainViewController: ComposableTabBarControllerOf<MainFeature>
 	public override func _init() {
 		super._init()
 
+		let feedNavigation = UINavigationController(
+			rootViewController: feedTabController.configured { $0
+				.title("Example")
+				.set { $0.tabBarItem = .init(
+					title: "Feed",
+					image: UIImage(systemName: "house"),
+					selectedImage: UIImage(systemName: "house.fill")
+				) }
+			}
+		)
+
+		let profileNavigation = UINavigationController(
+			rootViewController: profileTabController.configured { $0
+				.set { $0.tabBarItem = .init(
+					title: "Profile",
+					image: UIImage(systemName: "person"),
+					selectedImage: UIImage(systemName: "person.fill")
+				) }
+			}
+		)
+
+		feedNavigation.navigationBar.prefersLargeTitles = true
+
 		setViewControllers(
 			[
-				UINavigationController(
-					rootViewController: feedTabController.configured { $0
-						.set { $0.tabBarItem = .init(
-							title: "Feed",
-							image: UIImage(systemName: "house"),
-							selectedImage: UIImage(systemName: "house.fill")
-						) }
-					}
-				),
-				UINavigationController(
-					rootViewController: profileTabController.configured { $0
-						.set { $0.tabBarItem = .init(
-							title: "Profile",
-							image: UIImage(systemName: "person"),
-							selectedImage: UIImage(systemName: "person.fill")
-						) }
-					}
-				)
+				feedNavigation,
+				profileNavigation
 			],
 			animated: false
 		)

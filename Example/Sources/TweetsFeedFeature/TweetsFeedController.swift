@@ -7,7 +7,7 @@ import TweetDetailFeature
 
 @RoutingController
 public final class TweetsFeedController: ComposableViewControllerOf<TweetsFeedFeature> {
-	let host = ComposableHostingController<TweetsListView>(rootView: nil)
+	let host = ComposableHostingController<TweetsListView>()
 
 	@ComposableTreeDestination
 	var detailController: TweetDetailController?
@@ -43,7 +43,7 @@ public final class TweetsFeedController: ComposableViewControllerOf<TweetsFeedFe
 		into cancellables: inout Set<AnyCancellable>
 	) {
 		navigationDestination(
-			isPresented: \.detail.isNotNil,
+			isPresented: \.$detail.wrappedValue.isNotNil,
 			destination: $detailController,
 			popAction: .detail(.dismiss)
 		)

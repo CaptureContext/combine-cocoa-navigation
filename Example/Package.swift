@@ -13,6 +13,10 @@ let package = Package(
 			branch: "observation-beta"
 		),
 		.package(
+			url: "https://github.com/capturecontext/combine-extensions.git",
+			.upToNextMinor(from: "0.1.0")
+		),
+		.package(
 			url: "https://github.com/pointfreeco/swift-dependencies.git",
 			.upToNextMajor(from: "1.0.0")
 		),
@@ -37,6 +41,10 @@ let package = Package(
 			name: "LocalExtensions",
 			product: .library(.static),
 			dependencies: [
+				.product(
+					name: "CombineExtensions",
+					package: "combine-extensions"
+				),
 				.product(
 					name: "FoundationExtensions",
 					package: "swift-foundation-extensions"
@@ -141,6 +149,16 @@ let package = Package(
 		),
 
 		.target(
+			name: "TweetReplyFeature",
+			product: .library(.static),
+			dependencies: [
+				.target("TweetFeature"),
+				.dependency("_ComposableArchitecture"),
+				.localExtensions,
+			]
+		),
+
+		.target(
 			name: "CurrentUserProfileFeature",
 			product: .library(.static),
 			dependencies: [
@@ -156,6 +174,7 @@ let package = Package(
 			name: "DatabaseSchema",
 			product: .library(.static),
 			dependencies: [
+				.dependency("_Dependencies"),
 				.localExtensions
 			]
 		),
@@ -243,6 +262,7 @@ let package = Package(
 				.target("APIClient"),
 				.target("TweetFeature"),
 				.target("TweetsListFeature"),
+				.target("TweetReplyFeature"),
 				.dependency("_ComposableArchitecture"),
 				.localExtensions,
 			]
