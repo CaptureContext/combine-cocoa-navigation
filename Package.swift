@@ -36,10 +36,6 @@ let package = Package(
 			.upToNextMinor(from: "0.4.0")
 		),
 		.package(
-			url: "https://github.com/capturecontext/swift-declarative-configuration.git",
-			.upToNextMinor(from: "0.3.3")
-		),
-		.package(
 			url: "https://github.com/pointfreeco/swift-case-paths",
 			.upToNextMajor(from: "1.0.0")
 		),
@@ -72,10 +68,6 @@ let package = Package(
 				.product(
 					name: "FoundationExtensions",
 					package: "swift-foundation-extensions"
-				),
-				.product(
-					name: "DeclarativeConfiguration",
-					package: "swift-declarative-configuration"
 				),
 			]
 		),

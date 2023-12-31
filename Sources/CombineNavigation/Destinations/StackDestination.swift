@@ -3,7 +3,6 @@ import Capture
 import CocoaAliases
 import Combine
 import FoundationExtensions
-import DeclarativeConfiguration
 
 public protocol GrouppedDestinationProtocol<DestinationID> {
 	associatedtype DestinationID: Hashable
@@ -71,7 +70,7 @@ open class StackDestination<
 		for id: DestinationID
 	) -> Controller {
 		if
-			let controllerType = (Controller.self as? ConfigInitializable.Type),
+			let controllerType = (Controller.self as? DestinationInitializableControllerProtocol.Type),
 			let controller = controllerType.init() as? Controller
 		{
 			return controller
