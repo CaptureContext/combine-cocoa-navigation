@@ -3,6 +3,7 @@ import Capture
 import CocoaAliases
 import Combine
 import FoundationExtensions
+import DeclarativeConfiguration
 
 public protocol SingleDestinationProtocol {
 	@_spi(Internals)
@@ -61,7 +62,14 @@ open class TreeDestination<Controller: CocoaViewController>:
 	@_spi(Internals) 
 	@inlinable
 	open class func initController() -> Controller {
-		return Controller()
+		if
+			let controllerType = (Controller.self as? ConfigInitializable.Type),
+			let controller = controllerType.init() as? Controller
+		{
+			return controller
+		} else {
+			return Controller()
+		}
 	}
 	
 	@_spi(Internals) 
