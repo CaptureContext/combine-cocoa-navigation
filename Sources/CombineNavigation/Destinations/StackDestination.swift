@@ -15,6 +15,9 @@ public protocol GrouppedDestinationProtocol<DestinationID> {
 }
 
 /// Wrapper for creating and accessing managed navigation stack controllers
+///
+/// > ⚠️ Sublasses or typealiases must contain "StackDestination" in their name
+/// > to be processed by `@RoutingController` macro
 @propertyWrapper
 open class StackDestination<
 	DestinationID: Hashable,

@@ -13,6 +13,9 @@ public protocol SingleDestinationProtocol {
 }
 
 /// Wrapper for creating and accessing managed navigation destination controller
+///
+/// > ⚠️ Sublasses or typealiases must contain "TreeDestination" in their name
+/// > to be processed by `@RoutingController` macro
 @propertyWrapper
 open class TreeDestination<Controller: CocoaViewController>:
 	Weakifiable,

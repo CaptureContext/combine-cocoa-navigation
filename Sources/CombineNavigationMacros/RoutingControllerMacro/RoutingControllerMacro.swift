@@ -65,7 +65,9 @@ extension RoutingControllerMacro: ExtensionMacro {
 
 				let isNavigationChild = variable.attributes.contains { attribute in
 					switch attribute {
-					case let .attribute(attribute) where attribute.name.name.hasSuffix("Destination"):
+					case let .attribute(attribute) where
+						attribute.name.name.contains("TreeDestination") ||
+						attribute.name.name.contains("StackDestination"):
 						return true
 					default:
 						return false
