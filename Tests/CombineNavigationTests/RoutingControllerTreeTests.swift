@@ -104,7 +104,7 @@ fileprivate class TreeViewController: CocoaViewController {
 
 	func bind<P: Publisher<TreeViewModel.State, Never>>(_ publisher: P) {
 		navigationDestination(
-			publisher.map(\.destination?.tag).removeDuplicates(),
+			publisher.map(\.destination),
 			switch: { destinations, route in
 				switch route {
 				case .orderDetail:

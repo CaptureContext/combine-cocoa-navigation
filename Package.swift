@@ -20,6 +20,10 @@ let package = Package(
 	],
 	dependencies: [
 		.package(
+			url: "https://github.com/apple/swift-docc-plugin.git",
+			.upToNextMajor(from: "1.3.0")
+		),
+		.package(
 			url: "https://github.com/capturecontext/swift-capture.git",
 			.upToNextMajor(from: "3.0.1")
 		),
@@ -28,24 +32,20 @@ let package = Package(
 			.upToNextMajor(from: "2.0.5")
 		),
 		.package(
-			url: "https://github.com/capturecontext/combine-extensions.git",
-			.upToNextMinor(from: "0.1.0")
-		),
-		.package(
 			url: "https://github.com/capturecontext/swift-foundation-extensions.git",
 			.upToNextMinor(from: "0.4.0")
 		),
 		.package(
-			url: "https://github.com/stackotter/swift-macro-toolkit.git",
-			.upToNextMinor(from: "0.3.0")
+			url: "https://github.com/pointfreeco/swift-case-paths",
+			.upToNextMajor(from: "1.0.0")
 		),
 		.package(
 			url: "https://github.com/pointfreeco/swift-macro-testing.git",
 			.upToNextMinor(from: "0.2.0")
 		),
 		.package(
-			url: "https://github.com/apple/swift-docc-plugin.git",
-			.upToNextMajor(from: "1.3.0")
+			url: "https://github.com/stackotter/swift-macro-toolkit.git",
+			.upToNextMinor(from: "0.3.0")
 		),
 	],
 	targets: [
@@ -58,12 +58,12 @@ let package = Package(
 					package: "swift-capture"
 				),
 				.product(
-					name: "CocoaAliases",
-					package: "cocoa-aliases"
+					name: "CasePaths",
+					package: "swift-case-paths"
 				),
 				.product(
-					name: "CombineExtensions",
-					package: "combine-extensions"
+					name: "CocoaAliases",
+					package: "cocoa-aliases"
 				),
 				.product(
 					name: "FoundationExtensions",

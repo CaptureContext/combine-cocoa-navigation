@@ -167,7 +167,7 @@ fileprivate class TreeViewController: CocoaViewController {
 			&&
 			lhs.flatMap(\.stack).map(ObjectIdentifier.init)
 			== rhs.flatMap(\.stack).map(ObjectIdentifier.init)
-		}.sinkValues(capture { _self, destination in
+		}.sink(receiveValue: capture { _self, destination in
 			self.scope(_self.viewModel)
 		})
 		.store(in: &cancellables)
@@ -299,7 +299,7 @@ fileprivate class StackViewController: CocoaViewController {
 			&&
 			lhs.compactMap(\.stack).map(ObjectIdentifier.init)
 			== rhs.compactMap(\.stack).map(ObjectIdentifier.init)
-		}.sinkValues(capture { _self, destination in
+		}.sink(receiveValue: capture { _self, destination in
 			self.scope(_self.viewModel)
 		})
 		.store(in: &cancellables)

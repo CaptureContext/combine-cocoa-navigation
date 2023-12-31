@@ -114,7 +114,7 @@ extension CombineNavigationRouter {
 		} else {
 			node.publisher(for: \.navigationController)
 				.compactMap { $0 }
-				.sinkValues(capture { $0.syncNavigationStack(using: $1) })
+				.sink(receiveValue: capture { $0.syncNavigationStack(using: $1) })
 				.store(in: &navigationControllerCancellable)
 		}
 	}
@@ -123,7 +123,7 @@ extension CombineNavigationRouter {
 		navigationControllerCancellable = nil
 
 		navigation.popPublisher
-			.sinkValues(capture { _self, controllers in
+			.sink(receiveValue: capture { _self, controllers in
 				let routes = _self.routes.reduce(into: (
 					kept: [NavigationRoute](),
 					popped: [NavigationRoute]()

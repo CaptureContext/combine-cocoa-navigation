@@ -1,8 +1,9 @@
 #if canImport(UIKit) && !os(watchOS)
 import Capture
 import CocoaAliases
-import CombineExtensions
+import Combine
 import FoundationExtensions
+@_spi(Reflection) import CasePaths
 
 // MARK: - Public API
 
@@ -13,8 +14,8 @@ extension CombineNavigationRouter {
 	@usableFromInline
 	func navigationStack<
 		P: Publisher,
-		C: Collection & Equatable,
-		Route: Hashable
+		C: Collection,
+		Route
 	>(
 		_ publisher: P,
 		switch destination: @escaping (Route) -> any GrouppedDestinationProtocol<C.Index>,
@@ -40,7 +41,7 @@ extension CombineNavigationRouter {
 	func navigationStack<
 		P: Publisher,
 		C: Collection & Equatable,
-		Route: Hashable
+		Route
 	>(
 		_ publisher: P,
 		switch controller: @escaping (Route, C.Index) -> CocoaViewController,
@@ -80,8 +81,8 @@ extension CombineNavigationRouter {
 		P.Failure == Never,
 		IDs.Element: Hashable
 	{
-		navigationStack(
-			publisher: publisher,
+		_navigationStack(
+			publisher: publisher.removeDuplicates(by: { ids($0) == ids($1) }),
 			routes: capture(orReturn: []) { _self, stack in
 				ids(stack).compactMap { id in
 					route(stack, id).map { route in
@@ -116,8 +117,8 @@ extension CombineNavigationRouter {
 		P.Failure == Never,
 		IDs.Element: Hashable
 	{
-		navigationStack(
-			publisher: publisher,
+		_navigationStack(
+			publisher: publisher.removeDuplicates(by: { ids($0) == ids($1) }),
 			routes: capture(orReturn: []) { _self, stack in
 				ids(stack).compactMap { id in
 					route(stack, id).map { route in
@@ -131,7 +132,7 @@ extension CombineNavigationRouter {
 
 	/// Subscribes on publisher of navigation stack state
 	@usableFromInline
-	func navigationStack<
+	func _navigationStack<
 		P: Publisher,
 		Stack,
 		DestinationID
@@ -144,7 +145,7 @@ extension CombineNavigationRouter {
 		P.Failure == Never
 	{
 		return publisher
-			.sinkValues(capture { _self, stack in
+			.sink(receiveValue: capture { _self, stack in
 				let managedRoutes = routes(stack)
 
 				_self.setRoutes(
@@ -185,44 +186,26 @@ extension CombineNavigationRouter {
 
 	/// Subscribes on publisher of navigation destination state
 	@usableFromInline
-	func navigationDestination<P: Publisher>(
-		_ id: AnyHashable,
-		isPresented publisher: P,
-		controller: @escaping () -> CocoaViewController,
-		onPop: @escaping () -> Void
-	) -> AnyCancellable where
-		P.Output == Bool,
-		P.Failure == Never
-	{
-		navigationDestination(
-			publisher.map { $0 ? id : nil },
-			switch: { _ in controller() },
-			onPop: onPop
-		)
-	}
-
-	/// Subscribes on publisher of navigation destination state
-	@usableFromInline
 	func navigationDestination<P: Publisher, Route>(
 		_ publisher: P,
 		switch destination: @escaping (Route) -> SingleDestinationProtocol,
 		onPop: @escaping () -> Void
 	) -> AnyCancellable where
-		Route: Hashable,
 		P.Output == Optional<Route>,
 		P.Failure == Never
 	{
 		publisher
+			.removeDuplicates(by: { $0.flatMap(enumTag) == $1.flatMap(enumTag) })
 			.map { [weak self] (route) -> NavigationRoute? in
 				guard let self, let route else { return nil }
 				let destination = destination(route)
 				return self.makeNavigationRoute(
-					for: route,
+					for: enumTag(route),
 					controller: destination._initControllerIfNeeded,
 					invalidationHandler: destination._invalidateDestination
 				)
 			}
-			.sinkValues(capture { _self, route in
+			.sink(receiveValue: capture { _self, route in
 				_self.setRoutes(
 					route.map { [$0] }.or([]),
 					onPop: route.map { route in
@@ -234,34 +217,11 @@ extension CombineNavigationRouter {
 				)
 			})
 	}
+}
 
-	/// Subscribes on publisher of navigation destination state
-	@usableFromInline
-	func navigationDestination<P: Publisher, Route>(
-		_ publisher: P,
-		switch controller: @escaping (Route) -> CocoaViewController,
-		onPop: @escaping () -> Void
-	) -> AnyCancellable where
-		Route: Hashable,
-		P.Output == Optional<Route>,
-		P.Failure == Never
-	{
-		publisher
-			.map { [weak self] (route) -> NavigationRoute? in
-				guard let self, let route else { return nil }
-				return self.makeNavigationRoute(for: route) { controller(route) }
-			}
-			.sinkValues(capture { _self, route in
-				_self.setRoutes(
-					route.map { [$0] }.or([]),
-					onPop: route.map { route in
-						return { poppedRoutes in
-							let shouldTriggerPopHandler = poppedRoutes.contains(where: { $0 === route })
-							if shouldTriggerPopHandler { onPop() }
-						}
-					}
-				)
-			})
-	}
+/// Index of enum case in its declaration
+@usableFromInline
+internal func enumTag<Case>(_ `case`: Case) -> UInt32? {
+	EnumMetadata(Case.self)?.tag(of: `case`)
 }
 #endif

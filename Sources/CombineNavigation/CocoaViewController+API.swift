@@ -1,7 +1,7 @@
 #if canImport(UIKit) && !os(watchOS)
 import Capture
 import CocoaAliases
-import CombineExtensions
+import Combine
 import FoundationExtensions
 
 // MARK: - Public API
@@ -14,7 +14,7 @@ extension RoutingController {
 	public func navigationStack<
 		P: Publisher,
 		C: Collection & Equatable,
-		Route: Hashable
+		Route
 	>(
 		_ publisher: P,
 		switch destination: @escaping (Destinations, Route) -> any GrouppedDestinationProtocol<C.Index>,
@@ -90,7 +90,6 @@ extension RoutingController {
 		switch destination: @escaping (Destinations, Route) -> SingleDestinationProtocol,
 		onPop: @escaping () -> Void
 	) -> AnyCancellable where
-		Route: Hashable,
 		P.Output == Route?,
 		P.Failure == Never
 	{
