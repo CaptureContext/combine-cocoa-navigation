@@ -195,7 +195,11 @@ extension CombineNavigationRouter {
 		P.Failure == Never
 	{
 		publisher
-			.removeDuplicates(by: { $0.flatMap(enumTag) == $1.flatMap(enumTag) })
+			.removeDuplicates(by: {
+				let wrapped: Bool = enumTag($0) == enumTag($1)
+				let unwrapped: Bool = $0.flatMap(enumTag) == $1.flatMap(enumTag)
+				return wrapped && unwrapped
+			})
 			.map { [weak self] (route) -> NavigationRoute? in
 				guard let self, let route else { return nil }
 				let destination = destination(route)
