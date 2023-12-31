@@ -118,48 +118,40 @@ extension RoutingControllerMacro: ExtensionMacro {
 				return decl
 			}
 
-
-		typealias StackDestination = (identifier: String, idType: String)
-		let stackDestinations: [StackDestination] = try navigationDestinations.compactMap { decl in
+		let stackDestinations: [String] = navigationDestinations.compactMap { decl in
 			guard
 				let attribute = decl.attributes.first?.attribute,
-				attribute.name.name.hasSuffix("StackDestination"),
+				attribute.name.name.contains("StackDestination"),
 				let identifier = decl.bindings.first?.identifier
-			else { return StackDestination?.none }
+			else { return .none }
 
-			let idType: String = if let genericArgument = attribute.name.genericArguments?.first {
-				genericArgument.description
-			} else if let typeDecl = decl.bindings.first?.type?._syntax.as(DictionaryTypeSyntax.self) {
-				typeDecl.key.description
-			} else {
-				throw DiagnosticsError(diagnostics: [
-					.requiresDictionaryLiteralForStackDestination(attribute._syntax)
-				])
-			}
-
-			return StackDestination(identifier, idType)
+			return identifier
 		}
 
-
-
-		if let firstStackDestination = stackDestinations.first {
+		if !stackDestinations.isEmpty {
 			let erasedIDType = "some Hashable"
-			let commonIDType = stackDestinations.allSatisfy { destination in
-				destination.idType == firstStackDestination.idType
-			} ? firstStackDestination.idType : nil
+
+			let castedIDDecl: DeclSyntax = """
+			func controller<ID, Controller>(
+				for s: StackDestination<ID, Controller>
+			) -> UIViewController? {
+				return (id as? ID).flatMap {
+					s.wrappedValue[$0]
+				}
+			}
+			"""
 
 			var stackDestinationsCoalecing: String {
-				let subscriptCall = commonIDType.map { _ in "[id]" } ?? "[id as! $0.idType]"
 				return stackDestinations
-					.map { "\($0.identifier)\(subscriptCall)" }
+					.map { "controller(for: _\($0))" }
 					.joined(separator: "\n\t?? ")
 			}
 
-			let inputType = commonIDType ?? erasedIDType
-
 			let destinationsStructSubscriptDecl: DeclSyntax =
 			"""
-			\npublic subscript(_ id: \(raw: inputType)) -> UIViewController? {
+			\npublic subscript(_ id: \(raw: erasedIDType)) -> UIViewController? {
+				\(castedIDDecl)
+
 				return \(raw: stackDestinationsCoalecing)
 			}
 			"""
