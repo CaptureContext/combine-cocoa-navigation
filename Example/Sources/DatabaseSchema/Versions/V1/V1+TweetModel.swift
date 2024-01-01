@@ -8,8 +8,7 @@ extension DatabaseSchema.V1 {
 		public let id: String
 		public var createdAt: Date
 
-		@Relationship(inverse: \UserModel.tweets)
-		public var author: UserModel
+		public var author: UserModel?
 
 		@Relationship
 		public var repostSource: TweetModel?
@@ -31,23 +30,14 @@ extension DatabaseSchema.V1 {
 		public init(
 			id: USID,
 			createdAt: Date = .now,
-			author: UserModel,
-			repostSource: TweetModel? = nil,
-			replySource: TweetModel? = nil,
-			replies: [TweetModel] = [],
-			reposts: [TweetModel] = [],
-			likes: [UserModel] = [],
 			content: String
 		) {
 			self.id = id.rawValue
 			self.createdAt = createdAt
-			self.author = author
-			self.repostSource = repostSource
-			self.replySource = replySource
-			self.replies = replies
-			self.reposts = reposts
-			self.likes = likes
 			self.content = content
+			self.replies = []
+			self.reposts = []
+			self.likes = []
 		}
 	}
 }

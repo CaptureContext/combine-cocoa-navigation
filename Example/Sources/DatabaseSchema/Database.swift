@@ -1,10 +1,22 @@
 import _Dependencies
 
 public actor Database: Sendable {
-	public let context: ModelContext
+	private let container: ModelContainer
 
-	public init(context: ModelContext) {
-		self.context = context
+	public init(container: ModelContainer) {
+		self.container = container
+	}
+
+	@discardableResult
+	public func withContainer<T>(_ operation: (ModelContainer) async throws -> T) async rethrows -> T {
+		return try await operation(container)
+	}
+
+	@discardableResult
+	public func withContext<T>(_ operation: (ModelContext) async throws -> T) async rethrows -> T {
+		return try await withContainer { container in
+			try await operation(ModelContext(container))
+		}
 	}
 }
 
@@ -15,11 +27,11 @@ extension ModelContext: @unchecked Sendable {}
 
 extension Database: DependencyKey {
 	public static var liveValue: Database {
-		try! .init(context: DatabaseSchema.createModelContext(.file()))
+		try! .init(container: DatabaseSchema.createModelContainer(.file()))
 	}
 
 	public static var previewValue: Database {
-		try! .init(context: DatabaseSchema.createModelContext(.inMemory))
+		try! .init(container: DatabaseSchema.createModelContainer(.inMemory))
 	}
 }
 

@@ -26,9 +26,27 @@ public struct TweetReplyFeature {
 	@CasePathable
 	public enum Action: Equatable, BindableAction {
 		case binding(BindingAction<State>)
+		case tweet
 	}
 
+	@Dependency(\.apiClient)
+	var apiClient
+
+	@Dependency(\.currentUser)
+	var currentUser
+
 	public var body: some ReducerOf<Self> {
+		Pullback(\.tweet) { state in
+			guard state.replyText.isNotEmpty else { return .none }
+			let state = state
+			return .run { send in
+				#warning("Handle error")
+				_ = await apiClient.tweet.reply(
+					to: state.source.id,
+					with: state.replyText
+				)
+			}
+		}
 		BindingReducer()
 	}
 }

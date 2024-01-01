@@ -15,7 +15,7 @@ extension DatabaseSchema.V1 {
 		public var bio: String
 		public var avatarURL: URL?
 
-		@Relationship(deleteRule: .cascade)
+		@Relationship(deleteRule: .cascade, inverse: \TweetModel.author)
 		public var tweets: [TweetModel]
 
 		@Relationship
@@ -33,11 +33,7 @@ extension DatabaseSchema.V1 {
 			password: Data,
 			displayName: String = "",
 			bio: String = "",
-			avatarURL: URL? = nil,
-			tweets: [TweetModel] = [],
-			likedTweets: [TweetModel] = [],
-			follows: [UserModel] = [],
-			followers: [UserModel] = []
+			avatarURL: URL? = nil
 		) {
 			self.id = id.rawValue
 			self.username = username
@@ -45,10 +41,10 @@ extension DatabaseSchema.V1 {
 			self.displayName = displayName
 			self.bio = bio
 			self.avatarURL = avatarURL
-			self.tweets = tweets
-			self.likedTweets = likedTweets
-			self.follows = follows
-			self.followers = followers
+			self.tweets = []
+			self.likedTweets = []
+			self.follows = []
+			self.followers = []
 		}
 	}
 }

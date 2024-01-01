@@ -30,8 +30,9 @@ public struct TweetReplyView: ComposableView {
 		 }
 		.toolbar {
 			Button("Tweet") {
-				#warning("Handle tweet action")
+				store.send(.tweet)
 			}
+			.disabled(store.replyText.isEmpty)
 		}
 		.toolbarRole(.navigationStack)
 		.onAppear { focused = true }

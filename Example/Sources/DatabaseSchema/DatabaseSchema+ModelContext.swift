@@ -7,10 +7,10 @@ extension DatabaseSchema {
 		case file(URL = .applicationSupportDirectory.appending(path: "db.store"))
 	}
 
-	public static func createModelContext(
+	public static func createModelContainer(
 		_ persistance: ModelPersistance
-	) throws -> ModelContext {
-
+	) throws -> ModelContainer {
+		
 		let config = switch persistance {
 		case .inMemory:
 			ModelConfiguration(isStoredInMemoryOnly: true)
@@ -24,6 +24,6 @@ extension DatabaseSchema {
 			configurations: config
 		)
 
-		return ModelContext(container)
+		return container
 	}
 }

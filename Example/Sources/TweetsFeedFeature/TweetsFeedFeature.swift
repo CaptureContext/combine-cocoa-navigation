@@ -20,7 +20,7 @@ public struct TweetsFeedFeature {
 		public var alert: AlertState<Action.Alert>?
 
 		public init(
-			list:  TweetsListFeature.State = .init(),
+			list: TweetsListFeature.State = .init(),
 			detail: TweetDetailFeature.State? = nil,
 			alert: AlertState<Action.Alert>? = nil
 		) {

@@ -1,4 +1,4 @@
-import _Dependencies
+import Dependencies
 import SwiftData
 import LocalExtensions
 import DatabaseSchema
@@ -6,57 +6,91 @@ import AppModels
 
 extension APIClient: DependencyKey {
 	public static var liveValue: APIClient {
-		@Reference
-		var currentUser: DatabaseSchema.UserModel?
 
+		return .init(
+			auth: .backendLike(),
+			feed: .backendLike(),
+			tweet: .backendLike(),
+			user: .backendLike()
+		)
+	}
+}
+
+extension ModelContext {
+	fileprivate var currentUser: DatabaseSchema.UserModel? {
 		@Dependency(\.currentUser)
 		var userIDContainer
 
-		let trackedCurrentUser = _currentUser.onSet { user in
-			userIDContainer.id = user?.id.usid()
-		}
+		guard let currentUserID = userIDContainer.id?.rawValue
+		else { return nil }
 
-		return .init(
-			auth: .backendLike(
-				currentUser: trackedCurrentUser
+		return try? fetch(
+			DatabaseSchema.UserModel.self,
+			#Predicate { $0.id == currentUserID }
+		).first
+	}
+}
+
+extension DatabaseSchema.TweetModel {
+	public func toAPIModel() -> AppModels.TweetModel {
+		@Dependency(\.currentUser)
+		var currentUser
+
+		return TweetModel(
+			id: id.usid(),
+			author: .init(
+				id: author!.id.usid(),
+				avatarURL: author!.avatarURL,
+				displayName: author!.displayName,
+				username: author!.username
 			),
-			feed: .backendLike(
-				currentUser: trackedCurrentUser
-			),
-			tweet: .backendLike(
-				currentUser: trackedCurrentUser
-			),
-			user: .backendLike(
-				currentUser: trackedCurrentUser
-			)
+			createdAt: createdAt,
+			replyTo: replySource?.id.usid(),
+			repliesCount: replies.count,
+			isLiked: currentUser.id.map { userID in
+				likes.contains { (like: DatabaseSchema.UserModel) in
+					like.id == userID.rawValue
+				}
+			}.or(false),
+			likesCount: likes.count,
+			isReposted: currentUser.id.map { userID in
+				reposts.contains { (repost: DatabaseSchema.TweetModel) in
+					repost.author!.id == userID.rawValue
+				}
+			}.or(false),
+			repostsCount: reposts.count,
+			text: content
 		)
 	}
 }
 
 extension APIClient.Auth {
-	static func backendLike(
-		currentUser: Reference<DatabaseSchema.UserModel?>
-	) -> Self {
+	static func backendLike() -> Self {
 		.init(
 			signIn: .init { input in
 				return await Result {
 					@Dependency(\.database)
 					var database
 
-					let pwHash = try Data.sha256(input.password).unwrap().get()
+					@Dependency(\.currentUser)
+					var currentUser
 
-					let username = input.username
-					guard let user = try await database.context.fetch(
-						DatabaseSchema.UserModel.self,
-						#Predicate { $0.username == username }
-					).first
-					else { throw .usernameNotFound }
+					try await database.withContext { context in
+						let pwHash = try Data.sha256(input.password).unwrap().get()
 
-					guard user.password == pwHash else {
-						throw .wrongPassword
+						let username = input.username
+						guard let user = try context.fetch(
+							DatabaseSchema.UserModel.self,
+							#Predicate { $0.username == username }
+						).first
+						else { throw .usernameNotFound }
+
+						guard user.password == pwHash else {
+							throw .wrongPassword
+						}
+
+						currentUser.id = user.id.usid()
 					}
-
-					currentUser.wrappedValue = user
 				}.mapError(APIClient.Error.init)
 			},
 			signUp: .init { input in
@@ -64,71 +98,59 @@ extension APIClient.Auth {
 					@Dependency(\.database)
 					var database
 
-					let username = input.username
-					let userExists = try await database.context.fetch(
-						DatabaseSchema.UserModel.self,
-						#Predicate { $0.username == username }
-					).isNotEmpty
+					@Dependency(\.currentUser)
+					var currentUser
 
-					guard !userExists
-					else { throw .userAlreadyExists }
+					try await database.withContext { context in
+						let username = input.username
+						let userExists = try context.fetch(
+							DatabaseSchema.UserModel.self,
+							#Predicate { $0.username == username }
+						).isNotEmpty
 
-					let pwHash = try Data.sha256(input.password).unwrap().get()
+						guard !userExists
+						else { throw .userAlreadyExists }
 
-					let user = DatabaseSchema.UserModel(
-						id: USID(),
-						username: input.username,
-						password: pwHash
-					)
+						let pwHash = try Data.sha256(input.password).unwrap().get()
 
-					await database.context.insert(user)
-					try await database.context.save()
-					currentUser.wrappedValue = user
+						let user = DatabaseSchema.UserModel(
+							id: USID(),
+							username: input.username,
+							password: pwHash
+						)
+
+						context.insert(user)
+						try context.save()
+						currentUser.id = user.id.usid()
+					}
 				}.mapError(APIClient.Error.init)
 			},
 			logout: .init { _ in
-				currentUser.wrappedValue = nil
+				@Dependency(\.currentUser)
+				var currentUser
+
+				currentUser.id = nil
 			}
 		)
 	}
 }
 
 extension APIClient.Feed {
-	static func backendLike(
-		currentUser: Reference<DatabaseSchema.UserModel?>
-	) -> Self {
-		.init(
+	static func backendLike() -> APIClient.Feed {
+		return .init(
 			fetchTweets: .init { input in
 				return await Result {
 					@Dependency(\.database)
 					var database
 
-					return try await database.context.fetch(
-						DatabaseSchema.TweetModel.self,
-						#Predicate { $0.replySource == nil }
-					)
-					.dropFirst(input.page * input.limit)
-					.prefix(input.limit)
-					.map { tweet in
-						return TweetModel(
-							id: tweet.id.usid(),
-							author: .init(
-								id: tweet.author.id.usid(),
-								avatarURL: tweet.author.avatarURL,
-								displayName: tweet.author.displayName,
-								username: tweet.author.username
-							),
-							createdAt: tweet.createdAt,
-							replyTo: tweet.replySource?.id.usid(),
-							repliesCount: tweet.replies.count,
-							isLiked: currentUser.wrappedValue.map { user in
-								tweet.likes.contains { $0.id == user.id }
-							}.or(false),
-							likesCount: tweet.likes.count,
-							isReposted: currentUser.wrappedValue.map(tweet.reposts.map(\.author).contains).or(false),
-							repostsCount: tweet.reposts.count,
-							text: tweet.content
+					return try await database.withContext { context in
+						return try context.fetch(
+							DatabaseSchema.TweetModel.self,
+							#Predicate { $0.replySource == nil }
 						)
+						.dropFirst(input.page * input.limit)
+						.prefix(input.limit)
+						.map { $0.toAPIModel() }
 					}
 				}.mapError(APIClient.Error.init)
 			}
@@ -137,40 +159,24 @@ extension APIClient.Feed {
 }
 
 extension APIClient.Tweet {
-	static func backendLike(
-		currentUser: Reference<DatabaseSchema.UserModel?>
-	) -> Self {
+	static func backendLike() -> Self {
 		.init(
 			fetch: .init { input in
 				return await Result {
 					@Dependency(\.database)
 					var database
-					let tweetID = input.rawValue
-					guard let tweet = try await database.context.fetch(
-						DatabaseSchema.TweetModel.self,
-						#Predicate { $0.id == tweetID }
-					).first
-					else { throw .tweetNotFound }
 
-					return TweetModel(
-						id: tweet.id.usid(),
-						author: .init(
-							id: tweet.author.id.usid(),
-							avatarURL: tweet.author.avatarURL,
-							displayName: tweet.author.displayName,
-							username: tweet.author.username
-						),
-						createdAt: tweet.createdAt,
-						replyTo: tweet.replySource?.id.usid(),
-						repliesCount: tweet.replies.count,
-						isLiked: currentUser.wrappedValue.map { user in
-							tweet.likes.contains { $0 === user }
-						}.or(false),
-						likesCount: tweet.likes.count,
-						isReposted: currentUser.wrappedValue.map(tweet.reposts.map(\.author).contains).or(false),
-						repostsCount: tweet.reposts.count,
-						text: tweet.content
-					)
+					return try await database.withContext { context in
+						let tweetID = input.rawValue
+
+						guard let tweet = try context.fetch(
+							DatabaseSchema.TweetModel.self,
+							#Predicate { $0.id == tweetID }
+						).first
+						else { throw .tweetNotFound }
+
+						return tweet.toAPIModel()
+					}
 				}.mapError(APIClient.Error.init)
 			},
 			like: .init { input in
@@ -178,28 +184,30 @@ extension APIClient.Tweet {
 					@Dependency(\.database)
 					var database
 
-					guard let user = currentUser.wrappedValue
-					else { throw .unauthenticatedRequest("like a tweet") }
+					try await database.withContext { context in
+						guard let user = context.currentUser
+						else { throw .unauthenticatedRequest("like a tweet") }
 
-					let shouldLike = input.value
-					let isLiked = user.likedTweets.contains(where: { $0.id == input.id.rawValue })
-
-					guard shouldLike != isLiked else { return }
-
-					if shouldLike {
+						let shouldLike = input.value
 						let tweetID = input.id.rawValue
-						guard let tweet = try await database.context.fetch(
-							DatabaseSchema.TweetModel.self,
-							#Predicate { $0.id == tweetID }
-						).first
-						else { throw .tweetNotFound }
+						let isLiked = user.likedTweets.contains(where: { $0.id == tweetID })
 
-						user.likedTweets.append(tweet)
-					} else {
-						user.likedTweets.removeAll { $0.id == input.id.rawValue }
+						guard shouldLike != isLiked else { return }
+
+						if shouldLike {
+							guard let tweet = try context.fetch(
+								DatabaseSchema.TweetModel.self,
+								#Predicate { $0.id == tweetID }
+							).first
+							else { throw .tweetNotFound }
+
+							user.likedTweets.append(tweet)
+						} else {
+							user.likedTweets.removeAll { $0.id == tweetID }
+						}
+
+						try context.save()
 					}
-
-					try await database.context.save()
 				}.mapError(APIClient.Error.init)
 			},
 			post: .init { input in
@@ -207,17 +215,20 @@ extension APIClient.Tweet {
 					@Dependency(\.database)
 					var database
 
-					guard let user = currentUser.wrappedValue
-					else { throw .unauthenticatedRequest("post a tweet") }
+					try await database.withContext { context in
+						guard let user = context.currentUser
+						else { throw .unauthenticatedRequest("post a tweet") }
 
-					await database.context.insert(DatabaseSchema.TweetModel(
-						id: USID(),
-						createdAt: .now,
-						author: user,
-						content: input
-					))
+						DatabaseSchema.TweetModel(
+							id: USID(),
+							createdAt: .now,
+							content: input
+						)
+						.insert(to: context)
+						.update(\.author, with: { $0 = user })
 
-					try await database.context.save()
+						try context.save()
+					}
 				}.mapError(APIClient.Error.init)
 			},
 			repost: .init { input in
@@ -225,24 +236,28 @@ extension APIClient.Tweet {
 					@Dependency(\.database)
 					var database
 
-					guard let user = currentUser.wrappedValue
-					else { throw .unauthenticatedRequest("repost a tweet") }
+					try await database.withContext { context in
+						guard let user = context.currentUser
+						else { throw .unauthenticatedRequest("repost a tweet") }
 
-					let tweetID = input.id.rawValue
-					guard let originalTweet = try await database.context.fetch(
-						DatabaseSchema.TweetModel.self,
-						#Predicate { $0.id == tweetID }
-					).first
-					else { throw .tweetNotFound }
+						let tweetID = input.id.rawValue
+						guard let originalTweet = try context.fetch(
+							DatabaseSchema.TweetModel.self,
+							#Predicate { $0.id == tweetID }
+						).first
+						else { throw .tweetNotFound }
 
-					originalTweet.reposts.append(DatabaseSchema.TweetModel(
-						id: USID(),
-						createdAt: .now,
-						author: user,
-						content: input.content
-					))
+						DatabaseSchema.TweetModel(
+							id: USID(),
+							createdAt: .now,
+							content: input.content
+						)
+						.insert(to: context)
+						.update(\.author, with: { $0 = user })
+						.update(\.repostSource, with: { $0 = originalTweet })
 
-					try await database.context.save()
+						try context.save()
+					}
 				}.mapError(APIClient.Error.init)
 			},
 			reply: .init { input in
@@ -250,24 +265,28 @@ extension APIClient.Tweet {
 					@Dependency(\.database)
 					var database
 
-					guard let user = currentUser.wrappedValue
-					else { throw .unauthenticatedRequest("reply to a tweet") }
+					try await database.withContext { context in
+						guard let user = context.currentUser
+						else { throw .unauthenticatedRequest("reply to a tweet") }
 
-					let tweetID = input.id.rawValue
-					guard let originalTweet = try await database.context.fetch(
-						DatabaseSchema.TweetModel.self,
-						#Predicate { $0.id == tweetID }
-					).first
-					else { throw .tweetNotFound }
+						let tweetID = input.id.rawValue
+						guard let originalTweet = try context.fetch(
+							DatabaseSchema.TweetModel.self,
+							#Predicate { $0.id == tweetID }
+						).first
+						else { throw .tweetNotFound }
 
-					originalTweet.replies.append(DatabaseSchema.TweetModel(
-						id: USID(),
-						createdAt: .now,
-						author: user,
-						content: input.content
-					))
+						DatabaseSchema.TweetModel(
+							id: USID(),
+							createdAt: .now,
+							content: input.content
+						)
+						.insert(to: context)
+						.update(\.author, with: { $0 = user })
+						.update(\.replySource, with: { $0 = originalTweet })
 
-					try await database.context.save()
+						try context.save()
+					}
 				}.mapError(APIClient.Error.init)
 			},
 			delete: .init { input in
@@ -275,18 +294,21 @@ extension APIClient.Tweet {
 					@Dependency(\.database)
 					var database
 
-					guard let user = currentUser.wrappedValue
-					else { throw .unauthenticatedRequest("delete tweets") }
+					try await database.withContext { context in
+						guard let user = context.currentUser
+						else { throw .unauthenticatedRequest("delete tweets") }
 
-					guard let tweetToDelete = try await database.context.fetch(
-						DatabaseSchema.TweetModel.self,
-						#Predicate { $0.id == input.rawValue }
-					).first
-					else { throw .tweetNotFound }
+						let tweetID = input.rawValue
+						guard let tweetToDelete = try context.fetch(
+							DatabaseSchema.TweetModel.self,
+							#Predicate { $0.id == tweetID }
+						).first
+						else { throw .tweetNotFound }
 
-					user.tweets.removeAll { $0 === tweetToDelete }
+						user.tweets.removeAll { $0.id == tweetToDelete.id }
 
-					try await database.context.save()
+						try context.save()
+					}
 				}.mapError(APIClient.Error.init)
 			},
 			report: .init { input in
@@ -298,37 +320,19 @@ extension APIClient.Tweet {
 					@Dependency(\.database)
 					var database
 
-					let tweetID = input.id.rawValue
-					guard let tweet = try await database.context.fetch(
-						DatabaseSchema.TweetModel.self,
-						#Predicate { $0.id == tweetID }
-					).first
-					else { throw .tweetNotFound }
+					return try await database.withContext { context in
+						let tweetID = input.id.rawValue
+						guard let tweet = try context.fetch(
+							DatabaseSchema.TweetModel.self,
+							#Predicate { $0.id == tweetID }
+						).first
+						else { throw .tweetNotFound }
 
-					return tweet.replies
-						.dropFirst(input.page * input.limit)
-						.prefix(input.limit)
-						.map { tweet in
-							return TweetModel(
-								id: tweet.id.usid(),
-								author: .init(
-									id: tweet.author.id.usid(),
-									avatarURL: tweet.author.avatarURL,
-									displayName: tweet.author.displayName,
-									username: tweet.author.username
-								),
-								createdAt: tweet.createdAt,
-								replyTo: tweet.replySource?.id.usid(),
-								repliesCount: tweet.replies.count,
-								isLiked: currentUser.wrappedValue.map { user in
-									tweet.likes.contains { $0.id == user.id }
-								}.or(false),
-								likesCount: tweet.likes.count,
-								isReposted: currentUser.wrappedValue.map(tweet.reposts.map(\.author).contains).or(false),
-								repostsCount: tweet.reposts.count,
-								text: tweet.content
-							)
-						}
+						return tweet.replies
+							.dropFirst(input.page * input.limit)
+							.prefix(input.limit)
+							.map { $0.toAPIModel() }
+					}
 				}.mapError(APIClient.Error.init)
 			}
 		)
@@ -336,32 +340,38 @@ extension APIClient.Tweet {
 }
 
 extension APIClient.User {
-	static func backendLike(
-		currentUser: Reference<DatabaseSchema.UserModel?>
-	) -> Self {
+	static func backendLike() -> Self {
 		.init(
-			fetch: .init { id in
+			fetch: .init { input in
 				return await Result {
 					@Dependency(\.database)
 					var database
 
-					guard let user = try await database.context.fetch(
-						DatabaseSchema.UserModel.self,
-						#Predicate { $0.id == id.rawValue }
-					).first
-					else { throw .userNotFound }
+					return try await database.withContext { context in
+						let currentUser = context.currentUser
+						let userID = input.rawValue
+						guard let user = try context.fetch(
+							DatabaseSchema.UserModel.self,
+							#Predicate { $0.id == userID }
+						).first
+						else { throw .userNotFound }
 
-					return UserInfoModel(
-						id: user.id.usid(),
-						username: user.username,
-						displayName: user.displayName,
-						bio: user.bio,
-						avatarURL: user.avatarURL,
-						isFollowingYou: currentUser.wrappedValue?.followers.contains { $0 === user } ?? false,
-						isFollowedByYou: user.followers.contains { $0 === currentUser.wrappedValue },
-						followsCount: user.follows.count,
-						followersCount: user.followers.count
-					)
+						return UserInfoModel(
+							id: user.id.usid(),
+							username: user.username,
+							displayName: user.displayName,
+							bio: user.bio,
+							avatarURL: user.avatarURL,
+							isFollowingYou: currentUser.map { currentUser in
+								currentUser.followers.contains { $0.id == user.id }
+							}.or(false),
+							isFollowedByYou: currentUser.map { currentUser in
+								user.followers.contains { $0.id == currentUser.id }
+							}.or(false),
+							followsCount: user.follows.count,
+							followersCount: user.followers.count
+						)
+					}
 				}.mapError(APIClient.Error.init)
 			},
 			follow: .init { input in
@@ -369,28 +379,31 @@ extension APIClient.User {
 					@Dependency(\.database)
 					var database
 
-					guard let user = currentUser.wrappedValue
-					else { throw .unauthenticatedRequest("follow or unfollow profiles") }
+					try await database.withContext { context in
+						guard let user = context.currentUser
+						else { throw .unauthenticatedRequest("follow or unfollow profiles") }
 
-					let shouldFollow = input.value
-					let isFollowing = user.follows.contains(where: { $0.id == input.id.rawValue })
-
-					guard shouldFollow != isFollowing else { return }
-
-					if shouldFollow {
 						let userID = input.id.rawValue
-						guard let userToFollow = try await database.context.fetch(
-							DatabaseSchema.UserModel.self,
-							#Predicate { $0.id == userID }
-						).first
-						else { throw .userNotFound }
+						let shouldFollow = input.value
+						let isFollowing = user.follows.contains(where: { $0.id == userID })
 
-						user.follows.append(userToFollow)
-					} else {
-						user.follows.removeAll { $0.id == input.id.rawValue }
+						guard shouldFollow != isFollowing else { return }
+
+						if shouldFollow {
+							guard let userToFollow = try context.fetch(
+								DatabaseSchema.UserModel.self,
+								#Predicate { $0.id == userID }
+							).first
+							else { throw .userNotFound }
+
+							user.follows.append(userToFollow)
+						} else {
+							user.follows.removeAll { $0.id == userID }
+						}
+
+						try context.save()
 					}
 
-					try await database.context.save()
 				}.mapError(APIClient.Error.init)
 			},
 			report: .init { input in
@@ -401,37 +414,20 @@ extension APIClient.User {
 				return await Result {
 					@Dependency(\.database)
 					var database
-					let userID = input.id.rawValue
-					guard let user = try await database.context.fetch(
-						DatabaseSchema.UserModel.self,
-						#Predicate { $0.id == userID }
-					).first
-					else { throw .userNotFound }
 
-					return user.tweets
-						.dropFirst(input.page * input.limit)
-						.prefix(input.limit)
-						.map { tweet in
-							return TweetModel(
-								id: tweet.id.usid(),
-								author:.init(
-									id: tweet.author.id.usid(),
-									avatarURL: tweet.author.avatarURL,
-									displayName: tweet.author.displayName,
-									username: tweet.author.username
-								),
-								createdAt: tweet.createdAt,
-								replyTo: tweet.replySource?.id.usid(),
-								repliesCount: tweet.replies.count,
-								isLiked: currentUser.wrappedValue.map { user in
-									tweet.likes.contains { $0 === user }
-								}.or(false),
-								likesCount: tweet.likes.count,
-								isReposted: currentUser.wrappedValue.map(tweet.reposts.map(\.author).contains).or(false),
-								repostsCount: tweet.reposts.count,
-								text: tweet.content
-							)
-						}
+					return try await database.withContext { context in
+						let userID = input.id.rawValue
+						guard let user = try context.fetch(
+							DatabaseSchema.UserModel.self,
+							#Predicate { $0.id == userID }
+						).first
+						else { throw .userNotFound }
+
+						return user.tweets
+							.dropFirst(input.page * input.limit)
+							.prefix(input.limit)
+							.map { $0.toAPIModel() }
+					}
 				}.mapError(APIClient.Error.init)
 			}
 		)

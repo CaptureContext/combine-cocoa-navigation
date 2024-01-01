@@ -11,7 +11,7 @@ public struct UserInfoModel: Equatable, Identifiable, ConvertibleModel {
 	public var followsCount: Int
 	public var followersCount: Int
 	public var tweetsCount: Int
-
+	
 	public init(
 		id: USID,
 		username: String,
@@ -21,8 +21,8 @@ public struct UserInfoModel: Equatable, Identifiable, ConvertibleModel {
 		isFollowingYou: Bool = false,
 		isFollowedByYou: Bool = false,
 		followsCount: Int = 0,
-	  followersCount: Int = 0,
-	  tweetsCount: Int = 0
+		followersCount: Int = 0,
+		tweetsCount: Int = 0
 	) {
 		self.id = id
 		self.username = username

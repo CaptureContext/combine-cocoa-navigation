@@ -19,6 +19,7 @@ public struct SimpleTweetPreviewView: ComposableView {
 
 	public var body: some View {
 		_body
+			.frame(maxWidth: .infinity, alignment: .leading)
 			.scaledFont(ofSize: 14)
 			.background(color(\.background.primary))
 	}

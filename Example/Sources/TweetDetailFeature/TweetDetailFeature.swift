@@ -187,6 +187,11 @@ public struct TweetDetailFeature {
 				}
 			}
 
+			Pullback(\.destination.presented.tweetReply.tweet) { state in
+				#warning("Observe posting result instead of action and update child tweets")
+				return .send(.destination(.dismiss))
+			}
+
 			Scope(
 				state: \State.source,
 				action: \.source,
