@@ -4,10 +4,14 @@ import CombineExtensions
 import CombineNavigation
 import TweetsListFeature
 import TweetDetailFeature
+import TweetReplyFeature
 
 @RoutingController
 public final class TweetsFeedController: ComposableViewControllerOf<TweetsFeedFeature> {
 	let host = ComposableHostingController<TweetsListView>()
+
+	@ComposableViewPresentationDestination<TweetReplyView>
+	var tweetReplyController
 
 	@ComposableTreeDestination
 	var detailController: TweetDetailController?
@@ -32,6 +36,11 @@ public final class TweetsFeedController: ComposableViewControllerOf<TweetsFeedFe
 			action: \.list
 		))
 
+		_tweetReplyController.setStore(store?.scope(
+			state: \.tweetReply,
+			action: \.tweetReply.presented
+		))
+
 		_detailController.setStore(store?.scope(
 			state: \.detail,
 			action: \.detail.presented
@@ -42,6 +51,15 @@ public final class TweetsFeedController: ComposableViewControllerOf<TweetsFeedFe
 		_ publisher: StorePublisher,
 		into cancellables: inout Set<AnyCancellable>
 	) {
+		#warning("Add presentation to CombineNavigation")
+		
+		presentationDestination(
+			isPresented: \.$tweetReply.wrappedValue.isNotNil,
+			destination: $tweetReplyController,
+			dismissAction: .tweetReply(.dismiss)
+		)
+		.store(in: &cancellables)
+
 		navigationDestination(
 			isPresented: \.$detail.wrappedValue.isNotNil,
 			destination: $detailController,

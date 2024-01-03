@@ -45,7 +45,9 @@ public struct TweetsListFeature {
 				return .send(.delegate(.openDetail(id)))
 
 			case let .tweets(.element(id, .tapOnAuthor)):
-				return .send(.delegate(.openProfile(id)))
+				guard let authorID = state.tweets[id: id]?.author.id
+				else { return .none }
+				return .send(.delegate(.openProfile(authorID)))
 
 			default:
 				return .none

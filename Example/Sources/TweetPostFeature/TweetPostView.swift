@@ -1,9 +1,9 @@
 import _ComposableArchitecture
 import SwiftUI
-import TweetFeature
+import AppUI
 
-public struct TweetReplyView: ComposableView {
-	private let store: StoreOf<TweetReplyFeature>
+public struct TweetPostView: ComposableView {
+	private let store: StoreOf<TweetPostFeature>
 
 	@Environment(\.colorTheme)
 	private var color
@@ -11,18 +11,18 @@ public struct TweetReplyView: ComposableView {
 	@FocusState
 	private var focused: Bool
 
-	public init(_ store: StoreOf<TweetReplyFeature>) {
+	public init(_ store: StoreOf<TweetPostFeature>) {
 		self.store = store
 	}
 
 	public var body: some View {
 		_body
+			.padding(.top)
 	}
 
 	private var _body: some View {
 		ScrollView(.vertical) {
 			 VStack(spacing: 0) {
-				 makeTweetPreview()
 				 makeTweetInputField()
 				 Spacer(minLength: 8)
 			 }
@@ -32,18 +32,10 @@ public struct TweetReplyView: ComposableView {
 			Button("Tweet") {
 				store.send(.tweet)
 			}
-			.disabled(store.replyText.isEmpty)
+			.disabled(store.text.isEmpty)
 		}
 		.toolbarRole(.navigationStack)
 		.onAppear { focused = true }
-	}
-
-	@ViewBuilder
-	private func makeTweetPreview() -> some View {
-		SimpleTweetPreviewView(store.scope(
-			state: \.source,
-			action: \.never
-		))
 	}
 
 	@ViewBuilder
@@ -51,8 +43,8 @@ public struct TweetReplyView: ComposableView {
 		HStack(alignment: .top) {
 			makeAvatar(nil)
 			TextEditor(text: Binding(
-				get: { store.replyText },
-				set: { store.send(.binding(.set(\.replyText, $0))) })
+				get: { store.text },
+				set: { store.send(.binding(.set(\.text, $0))) })
 			)
 			.focused($focused)
 			.textEditorStyle(PlainTextEditorStyle())

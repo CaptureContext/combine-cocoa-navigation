@@ -104,19 +104,11 @@ public struct ProfileTabFeature {
 		}
 		Reduce { state, action in
 			switch action {
-			case let .path(.element(_, action: .feed(.delegate(.openProfile(id))))):
-				state.path.append(.profile(.external(.init(model: .init(
-					id: id,
-					username: "\(id)"
-				)))))
+			case
+				let .root(.profile(.delegate(.openProfile(id)))),
+				let .path(.element(_, .delegate(.openProfile(id)))):
+				state.path.append(.profile(.loading(id)))
 				return .none
-
-				//			case let .path(.element(stackID, .profile(.user(.tweetsList(.tweets(.element(_, .tap))))))):
-				//				guard case let .profile(.external(profile)) = state.path[id: stackID]
-				//				else { return .none }
-				//
-				//				state.path.append(.feed(.init(list: profile.tweetsList)))
-				//				return .none
 
 			default:
 				return .none

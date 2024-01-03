@@ -14,9 +14,9 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "CombineNavigation"
-               BuildableName = "CombineNavigation"
-               BlueprintName = "CombineNavigation"
+               BlueprintIdentifier = "TweetDetailFeature"
+               BuildableName = "TweetDetailFeature"
+               BlueprintName = "TweetDetailFeature"
                ReferencedContainer = "container:">
             </BuildableReference>
          </BuildActionEntry>
@@ -49,9 +49,9 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "CombineNavigation"
-            BuildableName = "CombineNavigation"
-            BlueprintName = "CombineNavigation"
+            BlueprintIdentifier = "TweetDetailFeature"
+            BuildableName = "TweetDetailFeature"
+            BlueprintName = "TweetDetailFeature"
             ReferencedContainer = "container:">
          </BuildableReference>
       </MacroExpansion>

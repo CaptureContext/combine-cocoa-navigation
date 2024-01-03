@@ -149,16 +149,6 @@ let package = Package(
 		),
 
 		.target(
-			name: "TweetReplyFeature",
-			product: .library(.static),
-			dependencies: [
-				.target("TweetFeature"),
-				.dependency("_ComposableArchitecture"),
-				.localExtensions,
-			]
-		),
-
-		.target(
 			name: "CurrentUserProfileFeature",
 			product: .library(.static),
 			dependencies: [
@@ -194,8 +184,11 @@ let package = Package(
 			name: "FeedTabFeature",
 			product: .library(.static),
 			dependencies: [
+				.target("AppUI"),
 				.target("UserProfileFeature"),
 				.target("TweetsFeedFeature"),
+				.target("TweetPostFeature"),
+				.target("ProfileAndFeedPivot"),
 				.dependency("_ComposableArchitecture"),
 				.localExtensions,
 			]
@@ -274,6 +267,27 @@ let package = Package(
 			dependencies: [
 				.target("AppUI"),
 				.target("AppModels"),
+				.dependency("_ComposableArchitecture"),
+				.localExtensions,
+			]
+		),
+
+		.target(
+			name: "TweetPostFeature",
+			product: .library(.static),
+			dependencies: [
+				.target("APIClient"),
+				.target("AppUI"),
+				.dependency("_ComposableArchitecture"),
+				.localExtensions,
+			]
+		),
+
+		.target(
+			name: "TweetReplyFeature",
+			product: .library(.static),
+			dependencies: [
+				.target("TweetFeature"),
 				.dependency("_ComposableArchitecture"),
 				.localExtensions,
 			]

@@ -12,6 +12,12 @@ public struct UserProfileView: ComposableView {
 	}
 
 	public var body: some View {
+		_body
+			.onAppear { store.send(.event(.didAppear)) }
+	}
+
+	@ViewBuilder
+	private var _body: some View {
 		switch store.state {
 		case .external:
 			store.scope(
@@ -25,6 +31,8 @@ public struct UserProfileView: ComposableView {
 				action: \.current
 			)
 			.map(CurrentUserProfileView.init)
+		case .loading:
+			ProgressView()
 		}
 	}
 }
