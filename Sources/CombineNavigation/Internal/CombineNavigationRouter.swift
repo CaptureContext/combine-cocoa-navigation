@@ -156,6 +156,7 @@ extension CombineNavigationRouter {
 
 		// Dont track dismiss if it was triggered
 		// manually from this method
+		#warning("Ensure that unrelated presentations are not affected")
 		self.destinationDismissCancellable = nil
 
 		let __presentNewDestinationIfNeeded: () -> Void = {

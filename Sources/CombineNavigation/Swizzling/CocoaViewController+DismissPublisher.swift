@@ -63,6 +63,7 @@ extension CocoaViewController {
 		animated: Bool,
 		completion: (() -> Void)?
 	) {
+		#warning("Handle dismiss for all nested presentations")
 		let dismissedController: UIViewController = presentedViewController ?? self
 		__swizzledDismiss(animated: animated, completion: {
 			dismissedController.dismissSubject.send(())
