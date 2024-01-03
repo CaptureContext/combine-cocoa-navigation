@@ -67,7 +67,8 @@ extension RoutingControllerMacro: ExtensionMacro {
 					switch attribute {
 					case let .attribute(attribute) where
 						attribute.name.name.contains("TreeDestination") ||
-						attribute.name.name.contains("StackDestination"):
+						attribute.name.name.contains("StackDestination") ||
+						attribute.name.name.contains("PresentationDestination"):
 						return true
 					default:
 						return false

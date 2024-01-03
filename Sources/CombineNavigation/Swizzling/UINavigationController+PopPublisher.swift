@@ -5,15 +5,8 @@ import Combine
 import FoundationExtensions
 
 extension UINavigationController {
-	private typealias PopSubject = PassthroughSubject<[CocoaViewController], Never>
-
-	private var popSubject: PopSubject {
-		getAssociatedObject(forKey: #function) ?? {
-			 let subject = PopSubject()
-			 setAssociatedObject(subject, forKey: #function)
-			 return subject
-		 }()
-	}
+	@AssociatedObject(readonly: true)
+	private var popSubject: PassthroughSubject<[CocoaViewController], Never> = .init()
 
 	/// Publisher for popped controllers
 	///
@@ -109,7 +102,7 @@ extension UINavigationController {
 
 extension UINavigationController {
 	// Runs once in app lifetime
-	internal static let swizzle: Void = {
+	internal static let bootstrapPopPublisher: Void = {
 		objc_exchangeImplementations(
 			#selector(popViewController(animated:)),
 			#selector(__swizzledPopViewController)

@@ -2,7 +2,6 @@ import XCTest
 import CocoaAliases
 import Capture
 import Combine
-import CombineSchedulers
 @testable import CombineNavigation
 
 #if canImport(UIKit) && !os(watchOS)

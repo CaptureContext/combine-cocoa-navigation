@@ -4,14 +4,14 @@ import CocoaAliases
 import Combine
 import FoundationExtensions
 
-public protocol GrouppedDestinationProtocol<DestinationID> {
+public protocol _StackDestinationProtocol<DestinationID>: AnyObject {
 	associatedtype DestinationID: Hashable
 
 	@_spi(Internals)
 	func _initControllerIfNeeded(for id: DestinationID) -> CocoaViewController
 
 	@_spi(Internals)
-	func _invalidateDestination(for id: DestinationID)
+	func _invalidate(_ id: DestinationID)
 }
 
 /// Wrapper for creating and accessing managed navigation stack controllers
@@ -22,7 +22,7 @@ public protocol GrouppedDestinationProtocol<DestinationID> {
 open class StackDestination<
 	DestinationID: Hashable,
 	Controller: CocoaViewController
->: Weakifiable, GrouppedDestinationProtocol {
+>: Weakifiable, _StackDestinationProtocol {
 	@_spi(Internals)
 	open var _controllers: [DestinationID: Controller] = [:]
 
@@ -114,7 +114,7 @@ open class StackDestination<
 
 	@_spi(Internals)
 	@inlinable
-	open func _invalidateDestination(for id: DestinationID) {
+	open func _invalidate(_ id: DestinationID) {
 		self._controllers.removeValue(forKey: id)
 	}
 

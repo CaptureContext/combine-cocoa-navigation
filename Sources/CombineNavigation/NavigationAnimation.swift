@@ -2,6 +2,25 @@
 import Combine
 import CocoaAliases
 
+extension CocoaViewController {
+	public func present(
+		_ controller: CocoaViewController,
+		completion: (() -> Void)? = nil
+	) {
+		present(
+			controller,
+			animated: NavigationAnimation.$isEnabled.get(),
+			completion: completion
+		)
+	}
+	public func dismiss(completion: (() -> Void)? = nil) {
+		dismiss(
+			animated: NavigationAnimation.$isEnabled.get(),
+			completion: completion
+		)
+	}
+}
+
 extension UINavigationController {
 	@discardableResult
 	public func popViewController() -> CocoaViewController? {

@@ -4,12 +4,15 @@ import CocoaAliases
 import Combine
 import FoundationExtensions
 
-public protocol _TreeDestinationProtocol: AnyObject {
+public protocol _PresentationDestinationProtocol: AnyObject {
 	@_spi(Internals)
 	func _initControllerIfNeeded() -> CocoaViewController
 
 	@_spi(Internals)
 	func _invalidate()
+
+	@_spi(Internals)
+	var _currentController: CocoaViewController? { get }
 }
 
 /// Wrapper for creating and accessing managed navigation destination controller
@@ -17,18 +20,21 @@ public protocol _TreeDestinationProtocol: AnyObject {
 /// > ⚠️ Sublasses or typealiases must contain "TreeDestination" in their name
 /// > to be processed by `@RoutingController` macro
 @propertyWrapper
-open class TreeDestination<Controller: CocoaViewController>:
+open class PresentationDestination<Controller: CocoaViewController>:
 	Weakifiable,
-	_TreeDestinationProtocol
+	_PresentationDestinationProtocol
 {
 	@_spi(Internals)
 	open var _controller: Controller?
 
+	@_spi(Internals)
+	public var _currentController: CocoaViewController? { _controller }
+
 	open var wrappedValue: Controller? { _controller }
 
 	@inlinable
-	open var projectedValue: TreeDestination<Controller> { self }
-	
+	open var projectedValue: PresentationDestination<Controller> { self }
+
 	@usableFromInline
 	internal var _initControllerOverride: (() -> Controller)?
 
@@ -58,7 +64,7 @@ open class TreeDestination<Controller: CocoaViewController>:
 		}
 	}
 
-	@_spi(Internals) 
+	@_spi(Internals)
 	@inlinable
 	open class func initController() -> Controller {
 		if
@@ -70,14 +76,14 @@ open class TreeDestination<Controller: CocoaViewController>:
 			return Controller()
 		}
 	}
-	
-	@_spi(Internals) 
+
+	@_spi(Internals)
 	@inlinable
 	open func configureController(_ controller: Controller) {}
 
 	/// Creates a new instance
 	public init() {}
-	
+
 	/// Creates a new instance with instance-specific override for creating a new controller
 	///
 	/// This override has the highest priority when creating a new controller, default one is just `Controller()`

@@ -16,7 +16,7 @@ let package = Package(
 		.library(
 			name: "CombineNavigation",
 			targets: ["CombineNavigation"]
-		),
+		)
 	],
 	dependencies: [
 		.package(

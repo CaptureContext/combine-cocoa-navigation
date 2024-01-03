@@ -3,11 +3,8 @@ import Capture
 import CocoaAliases
 import Combine
 import FoundationExtensions
-@_spi(Reflection) import CasePaths
 
-// MARK: - Public API
-
-// MARK: navigationStack
+// MARK: - navigationStack
 
 extension CombineNavigationRouter {
 	/// Subscribes on publisher of navigation stack state
@@ -18,7 +15,7 @@ extension CombineNavigationRouter {
 		Route
 	>(
 		_ publisher: P,
-		switch destination: @escaping (Route) -> any GrouppedDestinationProtocol<C.Index>,
+		switch destination: @escaping (Route) -> any _StackDestinationProtocol<C.Index>,
 		onPop: @escaping ([C.Index]) -> Void
 	) -> Cancellable where
 		P.Output == C,
@@ -74,7 +71,7 @@ extension CombineNavigationRouter {
 		_ publisher: P,
 		ids: @escaping (Stack) -> IDs,
 		route: @escaping (Stack, IDs.Element) -> Route?,
-		switch destination: @escaping (Route) -> any GrouppedDestinationProtocol<IDs.Element>,
+		switch destination: @escaping (Route) -> any _StackDestinationProtocol<IDs.Element>,
 		onPop: @escaping ([IDs.Element]) -> Void
 	) -> Cancellable where
 		P.Output == Stack,
@@ -90,7 +87,7 @@ extension CombineNavigationRouter {
 						return _self.makeNavigationRoute(
 							for: id,
 							controller: { destination._initControllerIfNeeded(for: id) },
-							invalidationHandler: { destination._invalidateDestination(for: id) }
+							invalidationHandler: { destination._invalidate(id) }
 						)
 					}
 				}
@@ -152,10 +149,13 @@ extension CombineNavigationRouter {
 					managedRoutes,
 					onPop: managedRoutes.isNotEmpty
 					? { poppedRoutes in
-						onPop(poppedRoutes.compactMap { route in
+						let routes = poppedRoutes.compactMap { (route) -> DestinationID? in
 							guard managedRoutes.contains(where: { $0 === route }) else { return nil }
 							return route.id as? DestinationID
-						})
+						}
+
+						poppedRoutes.forEach { $0.invalidationHandler?() }
+						onPop(routes)
 					}
 					: nil
 				)
@@ -163,7 +163,7 @@ extension CombineNavigationRouter {
 	}
 }
 
-// MARK: navigationDestination
+// MARK: - navigationDestination
 
 extension CombineNavigationRouter {
 	/// Subscribes on publisher of navigation destination state
@@ -171,7 +171,7 @@ extension CombineNavigationRouter {
 	func navigationDestination<P: Publisher>(
 		_ id: AnyHashable,
 		isPresented publisher: P,
-		destination: SingleDestinationProtocol,
+		destination: _TreeDestinationProtocol,
 		onPop: @escaping () -> Void
 	) -> AnyCancellable where
 		P.Output == Bool,
@@ -188,7 +188,7 @@ extension CombineNavigationRouter {
 	@usableFromInline
 	func navigationDestination<P: Publisher, Route>(
 		_ publisher: P,
-		switch destination: @escaping (Route) -> SingleDestinationProtocol,
+		switch destination: @escaping (Route) -> _TreeDestinationProtocol,
 		onPop: @escaping () -> Void
 	) -> AnyCancellable where
 		P.Output == Optional<Route>,
@@ -206,7 +206,7 @@ extension CombineNavigationRouter {
 				return self.makeNavigationRoute(
 					for: enumTag(route),
 					controller: destination._initControllerIfNeeded,
-					invalidationHandler: destination._invalidateDestination
+					invalidationHandler: destination._invalidate
 				)
 			}
 			.sink(receiveValue: capture { _self, route in
@@ -215,6 +215,7 @@ extension CombineNavigationRouter {
 					onPop: route.map { route in
 						return { poppedRoutes in
 							let shouldTriggerPopHandler = poppedRoutes.contains(where: { $0 === route })
+							poppedRoutes.forEach { $0.invalidationHandler?() }
 							if shouldTriggerPopHandler { onPop() }
 						}
 					}
@@ -223,9 +224,45 @@ extension CombineNavigationRouter {
 	}
 }
 
-/// Index of enum case in its declaration
-@usableFromInline
-internal func enumTag<Case>(_ `case`: Case) -> UInt32? {
-	EnumMetadata(Case.self)?.tag(of: `case`)
+// MARK: - presentationDestination
+
+extension CombineNavigationRouter {
+	/// Subscribes on publisher of navigation destination state
+	@usableFromInline
+	func presentationDestination<P: Publisher>(
+		_ id: AnyHashable,
+		isPresented publisher: P,
+		destination: _PresentationDestinationProtocol,
+		onDismiss: @escaping () -> Void
+	) -> AnyCancellable where
+		P.Output == Bool,
+		P.Failure == Never
+	{
+		presentationDestination(
+			publisher.map { $0 ? id : nil },
+			switch: { _ in destination },
+			onDismiss: onDismiss
+		)
+	}
+
+	/// Subscribes on publisher of navigation destination state
+	@usableFromInline
+	func presentationDestination<P: Publisher, Route>(
+		_ publisher: P,
+		switch destination: @escaping (Route) -> _PresentationDestinationProtocol,
+		onDismiss: @escaping () -> Void
+	) -> AnyCancellable where
+		P.Output == Optional<Route>,
+		P.Failure == Never
+	{
+		publisher
+			.removeDuplicates(by: Optional.compareTagsEqual)
+			.sink(receiveValue: capture { _self, route in
+				_self.present(
+					route.map(destination),
+					onDismiss: onDismiss
+				)
+			})
+	}
 }
 #endif

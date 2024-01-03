@@ -30,7 +30,7 @@ extension CombineNavigationRouter {
 		let routingControllerID: ObjectIdentifier
 		private(set) var routedControllerID: ObjectIdentifier?
 		private let controller: () -> CocoaViewController?
-		private let invalidationHandler: (() -> Void)?
+		let invalidationHandler: (() -> Void)?
 
 		init(
 			id: AnyHashable,
@@ -64,10 +64,14 @@ final class CombineNavigationRouter: Weakifiable {
 	}
 
 	fileprivate var navigationControllerCancellable: AnyCancellable?
+	fileprivate var windowCancellable: AnyCancellable?
+
 	fileprivate var destinationDismissCancellable: AnyCancellable?
+	fileprivate var destinationPopCancellable: AnyCancellable?
 
 	fileprivate var popHandler: (([NavigationRoute]) -> Void)?
 	fileprivate var routes: [NavigationRoute] = []
+	fileprivate var presentedDestination: _PresentationDestinationProtocol?
 
 	fileprivate init(_ node: CocoaViewController?) {
 		self.node = node
@@ -89,6 +93,16 @@ final class CombineNavigationRouter: Weakifiable {
 		self.requestNavigationStackSync()
 	}
 
+	func present(
+		_ presentationDestination: _PresentationDestinationProtocol?,
+		onDismiss: @escaping () -> Void
+	) {
+		self.requestSetPresentationDestination(
+			presentationDestination,
+			onDismiss: onDismiss
+		)
+	}
+
 	func makeNavigationRoute<ID: Hashable>(
 		for id: ID,
 		controller: @escaping () -> CocoaViewController?,
@@ -106,6 +120,64 @@ final class CombineNavigationRouter: Weakifiable {
 // MARK: Navigation stack sync
 
 extension CombineNavigationRouter {
+	fileprivate func requestSetPresentationDestination(
+		_ destination: _PresentationDestinationProtocol?,
+		onDismiss: @escaping () -> Void
+	) {
+		guard let node else { return }
+
+		if node.view.window != nil {
+			_setPresentationDestination(
+				destination,
+				onDismiss: onDismiss
+			)
+		} else {
+			node.view.publisher(for: \.window)
+				.filter(\.isNotNil)
+				.sink(receiveValue: capture { _self, _ in
+					_self._setPresentationDestination(
+						destination,
+						onDismiss: onDismiss
+					)
+				})
+				.store(in: &windowCancellable)
+		}
+	}
+
+	private func _setPresentationDestination(
+		_ newDestination: _PresentationDestinationProtocol?,
+		onDismiss: @escaping () -> Void
+	) {
+		self.windowCancellable = nil
+
+		let oldDestination = self.presentedDestination
+
+		guard oldDestination !== newDestination else { return }
+
+		// Dont track dismiss if it was triggered
+		// manually from this method
+		self.destinationDismissCancellable = nil
+
+		let __presentNewDestinationIfNeeded: () -> Void = {
+			if let destination = newDestination {
+				let controller = destination._initControllerIfNeeded()
+				controller.dismissPublisher
+					.sink(receiveValue: onDismiss)
+					.store(in: &self.destinationDismissCancellable)
+				self.node.present(controller)
+			}
+
+			self.presentedDestination = newDestination
+			oldDestination?._invalidate()
+		}
+
+		if node.presentedViewController != nil {
+			node.dismiss(completion: __presentNewDestinationIfNeeded)
+		} else {
+			__presentNewDestinationIfNeeded()
+		}
+	}
+
 	fileprivate func requestNavigationStackSync() {
 		guard let node else { return }
 
@@ -137,7 +209,7 @@ extension CombineNavigationRouter {
 				_self.routes = routes.kept
 				_self.popHandler?(routes.popped)
 			})
-			.store(in: &destinationDismissCancellable)
+			.store(in: &destinationPopCancellable)
 
 		navigation.setViewControllers(
 			buildNavigationStack()

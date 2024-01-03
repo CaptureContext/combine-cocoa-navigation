@@ -17,7 +17,7 @@ extension RoutingController {
 		Route
 	>(
 		_ publisher: P,
-		switch destination: @escaping (Destinations, Route) -> any GrouppedDestinationProtocol<C.Index>,
+		switch destination: @escaping (Destinations, Route) -> any _StackDestinationProtocol<C.Index>,
 		onPop: @escaping ([C.Index]) -> Void
 	) -> Cancellable where
 		P.Output == C,
@@ -44,7 +44,7 @@ extension RoutingController {
 		_ publisher: P,
 		ids: @escaping (Stack) -> IDs,
 		route: @escaping (Stack, IDs.Element) -> Route?,
-		switch destination: @escaping (Destinations, Route) -> any GrouppedDestinationProtocol<IDs.Element>,
+		switch destination: @escaping (Destinations, Route) -> any _StackDestinationProtocol<IDs.Element>,
 		onPop: @escaping ([IDs.Element]) -> Void
 	) -> Cancellable where
 		P.Output == Stack,
@@ -69,7 +69,7 @@ extension RoutingController {
 	public func navigationDestination<P: Publisher>(
 		_ id: AnyHashable,
 		isPresented publisher: P,
-		destination: SingleDestinationProtocol,
+		destination: _TreeDestinationProtocol,
 		onPop: @escaping () -> Void
 	) -> AnyCancellable where
 		P.Output == Bool,
@@ -87,7 +87,7 @@ extension RoutingController {
 	@inlinable
 	public func navigationDestination<P: Publisher, Route>(
 		_ publisher: P,
-		switch destination: @escaping (Destinations, Route) -> SingleDestinationProtocol,
+		switch destination: @escaping (Destinations, Route) -> _TreeDestinationProtocol,
 		onPop: @escaping () -> Void
 	) -> AnyCancellable where
 		P.Output == Route?,
@@ -101,13 +101,61 @@ extension RoutingController {
 	}
 }
 
+// MARK: - presentationDestination
+
+extension RoutingController {
+	@inlinable
+	public func presentationDestination<P: Publisher>(
+		_ id: AnyHashable,
+		isPresented publisher: P,
+		destination: _PresentationDestinationProtocol,
+		onDismiss: @escaping () -> Void
+	) -> AnyCancellable where
+		P.Output == Bool,
+		P.Failure == Never
+	{
+		combineNavigationRouter.presentationDestination(
+			id,
+			isPresented: publisher,
+			destination: destination,
+			onDismiss: onDismiss
+		)
+	}
+
+	@inlinable
+	public func presentationDestination<P: Publisher, Route>(
+		_ publisher: P,
+		switch destination: @escaping (Destinations, Route) -> _PresentationDestinationProtocol,
+		onDismiss: @escaping () -> Void
+	) -> AnyCancellable where
+		P.Output == Route?,
+		P.Failure == Never
+	{
+		combineNavigationRouter.presentationDestination(
+			publisher,
+			switch: destinations(destination),
+			onDismiss: onDismiss
+		)
+	}
+}
+
 // MARK: - Internal helpers
 
 extension RoutingController {
 	@usableFromInline
 	internal func destinations<Route>(
-		_ mapping: @escaping (Destinations, Route) -> SingleDestinationProtocol
-	) -> (Route) -> SingleDestinationProtocol {
+		_ mapping: @escaping (Destinations, Route) -> _TreeDestinationProtocol
+	) -> (Route) -> _TreeDestinationProtocol {
+		let destinations = _makeDestinations()
+		return { route in
+			mapping(destinations, route)
+		}
+	}
+
+	@usableFromInline
+	internal func destinations<Route>(
+		_ mapping: @escaping (Destinations, Route) -> _PresentationDestinationProtocol
+	) -> (Route) -> _PresentationDestinationProtocol {
 		let destinations = _makeDestinations()
 		return { route in
 			mapping(destinations, route)
@@ -116,8 +164,8 @@ extension RoutingController {
 
 	@usableFromInline
 	internal func destinations<Route, DestinationID: Hashable>(
-		_ mapping: @escaping (Destinations, Route) -> any GrouppedDestinationProtocol<DestinationID>
-	) -> (Route) -> any GrouppedDestinationProtocol<DestinationID> {
+		_ mapping: @escaping (Destinations, Route) -> any _StackDestinationProtocol<DestinationID>
+	) -> (Route) -> any _StackDestinationProtocol<DestinationID> {
 		let destinations = _makeDestinations()
 		return { route in
 			mapping(destinations, route)

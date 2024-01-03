@@ -2,6 +2,7 @@
 import CocoaAliases
 
 public func bootstrap() {
-	UINavigationController.swizzle
+	CocoaViewController.bootstrapDismissPublisher
+	UINavigationController.bootstrapPopPublisher
 }
 #endif
