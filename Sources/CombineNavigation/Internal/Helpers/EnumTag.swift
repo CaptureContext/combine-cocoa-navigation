@@ -13,8 +13,8 @@ extension Optional {
 		lhs: Self,
 		rhs: Self
 	) -> Bool {
-		let wrapped: Bool = enumTag(lhs) == enumTag(rhs)
-		let unwrapped: Bool = lhs.flatMap(enumTag) == rhs.flatMap(enumTag)
-		return wrapped && unwrapped
+		let wrappedCompare: Bool = enumTag(lhs) == enumTag(rhs)
+		let unwrappedCompare: Bool = lhs.flatMap(enumTag) == rhs.flatMap(enumTag)
+		return wrappedCompare && unwrappedCompare
 	}
 }
