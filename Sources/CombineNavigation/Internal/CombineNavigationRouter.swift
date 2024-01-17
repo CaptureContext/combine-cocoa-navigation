@@ -180,7 +180,7 @@ extension CombineNavigationRouter {
 					.sink(receiveValue: onDismiss)
 					.store(in: &router.destinationDismissCancellable)
 
-				self.node.present(controller)
+				router.node.present(controller)
 			}
 
 			self.presentedDestination = newDestination
