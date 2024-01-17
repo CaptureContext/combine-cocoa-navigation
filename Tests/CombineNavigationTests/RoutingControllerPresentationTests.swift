@@ -6,7 +6,7 @@ import Combine
 
 #if canImport(UIKit) && !os(watchOS)
 
-// TODO: Test deinitialization
+// TODO: Test destinations deinitialization
 // Note: Manual check succeed ✅
 
 final class RoutingControllePresentationTests: XCTestCase {
@@ -25,35 +25,30 @@ final class RoutingControllePresentationTests: XCTestCase {
 
 		// Disable navigation animation for tests
 		withoutNavigationAnimation {
-			XCTAssert(controller._topPresentedController === controller)
+			XCTAssertEqual(controller._topPresentedController, controller)
 
 			viewModel.state.value.destination = .feedback()
-			XCTAssert(controller._topPresentedController === controller.feedbackController)
+			XCTAssertEqual(controller._topPresentedController, controller.feedbackController)
 
 			viewModel.state.value.destination = .orderDetail()
-			XCTAssert(controller._topPresentedController === controller.orderDetailController)
+			XCTAssertEqual(controller._topPresentedController, controller.orderDetailController)
 
 			controller.dismiss()
 			XCTAssertEqual(viewModel.state.value.destination, .none)
 
 			viewModel.state.value.destination = .feedback()
-			XCTAssert(controller._topPresentedController === controller.feedbackController)
+			XCTAssertEqual(controller._topPresentedController, controller.feedbackController)
 
 			viewModel.state.value.destination = .none
-			XCTAssert(controller._topPresentedController === controller)
+			XCTAssertEqual(controller._topPresentedController, controller)
 		}
 	}
 }
 
 fileprivate let testDestinationID = UUID()
 
-fileprivate class OrderDetailsController: CocoaViewController {}
-fileprivate class FeedbackController: CocoaViewController {
-	override func viewDidDisappear(_ animated: Bool) {
-		super.viewDidDisappear(animated)
-		print("Disappear")
-	}
-}
+fileprivate class OrderDetailsController: AppleSpaghettiCodeTestableController {}
+fileprivate class FeedbackController: AppleSpaghettiCodeTestableController {}
 
 fileprivate class PresentationViewModel {
 	struct State {
@@ -80,7 +75,7 @@ fileprivate class PresentationViewModel {
 }
 
 @RoutingController
-fileprivate class PresentationViewController: CocoaViewController {
+fileprivate class PresentationViewController: AppleSpaghettiCodeTestableController {
 	private var cancellables: Set<AnyCancellable> = []
 
 	var viewModel: PresentationViewModel! {
@@ -109,15 +104,6 @@ fileprivate class PresentationViewController: CocoaViewController {
 			}
 		)
 		.store(in: &cancellables)
-	}
-}
-extension CocoaViewController {
-	var _topPresentedController: CocoaViewController? {
-		if let presentedViewController {
-			return presentedViewController._topPresentedController
-		} else {
-			return self
-		}
 	}
 }
 

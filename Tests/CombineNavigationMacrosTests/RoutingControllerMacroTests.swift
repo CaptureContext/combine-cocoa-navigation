@@ -145,7 +145,7 @@ final class RoutingControllerMacroTests: XCTestCase {
 			"""
 			@RoutingController
 			final class CustomController {
-				@PresentationDestination
+				@PresentationDestination(container: .navigation)
 				var firstDetailController: CocoaViewController?
 				@PresentationDestination
 				var secondDetailController: CocoaViewController?
@@ -154,7 +154,7 @@ final class RoutingControllerMacroTests: XCTestCase {
 		} expansion: {
 			"""
 			final class CustomController {
-				@PresentationDestination
+				@PresentationDestination(container: .navigation)
 				var firstDetailController: CocoaViewController?
 				@PresentationDestination
 				var secondDetailController: CocoaViewController?
@@ -168,7 +168,7 @@ final class RoutingControllerMacroTests: XCTestCase {
 				/// Use in `navigationDestination`/`navigationStack` methods to map
 				/// routes to specific destinations using `destinations` method
 				public struct Destinations {
-					@PresentationDestination
+					@PresentationDestination(container: .navigation)
 					var firstDetailController: CocoaViewController?
 
 					@PresentationDestination

@@ -59,8 +59,21 @@ extension CombineNavigationRouter {
 final class CombineNavigationRouter: Weakifiable {
 	fileprivate weak var parent: CombineNavigationRouter?
 	fileprivate weak var node: CocoaViewController!
+
 	fileprivate var directChildren: [Weak<CombineNavigationRouter>] = [] {
 		didSet { directChildren.removeAll(where: \.object.isNil) }
+	}
+
+	fileprivate var isDirectChild: Bool {
+		true == parent?.directChildren
+			.compactMap(\.object?.objectID)
+			.contains(objectID)
+	}
+
+	fileprivate func navigationGroupRoot() -> CombineNavigationRouter {
+		return isDirectChild
+		? parent!.navigationGroupRoot()
+		: self
 	}
 
 	fileprivate var navigationControllerCancellable: AnyCancellable?
@@ -150,30 +163,35 @@ extension CombineNavigationRouter {
 	) {
 		self.windowCancellable = nil
 
-		let oldDestination = self.presentedDestination
+		let router = self.navigationGroupRoot()
+		let oldDestination = router.presentedDestination
 
 		guard oldDestination !== newDestination else { return }
 
-		// Dont track dismiss if it was triggered
-		// manually from this method
-		#warning("Ensure that unrelated presentations are not affected")
-		self.destinationDismissCancellable = nil
+		router.destinationDismissCancellable = nil
 
 		let __presentNewDestinationIfNeeded: () -> Void = {
+			oldDestination?._invalidate()
+
 			if let destination = newDestination {
-				let controller = destination._initControllerIfNeeded()
-				controller.dismissPublisher
+				let controller = destination._initControllerForPresentationIfNeeded()
+
+				controller.selfDismissPublisher
 					.sink(receiveValue: onDismiss)
-					.store(in: &self.destinationDismissCancellable)
+					.store(in: &router.destinationDismissCancellable)
+
 				self.node.present(controller)
 			}
 
 			self.presentedDestination = newDestination
-			oldDestination?._invalidate()
 		}
 
-		if node.presentedViewController != nil {
-			node.dismiss(completion: __presentNewDestinationIfNeeded)
+		if router.node.presentedViewController != nil {
+			// Cancel current dismiss subscription
+			// to avoid dismiss action called on
+			// state changes
+			router.destinationDismissCancellable = nil
+			router.node.dismiss(completion: __presentNewDestinationIfNeeded)
 		} else {
 			__presentNewDestinationIfNeeded()
 		}
@@ -241,4 +259,6 @@ extension CombineNavigationRouter {
 		+ routes.compactMap { $0.makeController(routedBy: self) }
 	}
 }
+
+// MARK: Helpers
 #endif

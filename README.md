@@ -4,15 +4,25 @@
 
 >Package compiles for all platforms, but functionality is available if UIKit can be imported and the platform is not watchOS.
 
-> This readme is draft and the branch is still an `beta` version.
+> The branch is a `pre-release` version.
 
 ## Usage
 
 This library was primarely created for [TCA](https://github.com/pointfreeco/swift-composable-architecture) navigation with Cocoa. However it's geneic enough to use with pure combine. But to dive more into general understanding of stack-based and tree based navigation take a look at TCA docs.
 
+- See [`ComposableExtensions`](https://github.com/capturecontext/composable-architecture-extensions) if you use TCA, it provides better APIs for TCA.
+- See [`Example`](./Example)_`(wip)`_ for more usage examples (_it uses [`ComposableExtensions`](https://github.com/capturecontext/composable-architecture-extensions), but th API is similar_).
+- See [`Docs`](https://swiftpackageindex.com/capturecontext/combine-cocoa-navigation/1.0.0/documentation/combinenavigation) for documentation reference.
+
 ### Setup
 
-It's **extremely important** to call `bootstrap()` function in the beginning of your app's lifecycle to perform required swizzling for enabling `UINavigationController.popPublisher()`
+It's **extremely important** to call `bootstrap()` function in the beginning of your app's lifecycle to perform required swizzling for enabling
+
+- `UINavigationController.popPublisher`
+- `UIViewController.dismissPublisher`
+- `UIViewController.selfDismissPublisher`
+
+Maybe someday a bug in the compiler will be fixed and we may introduce automatic bootstrap.
 
 ```swift
 import UIKit
@@ -128,12 +138,59 @@ final class MyViewController: UIViewController {
 }
 ```
 
-## Coming soon
+### Presentation
 
-- Rich example
-- Readme update
-- Presentation helpers
-- There are a few compiler todos to resolve
+Basically all you need is to call `presentationDestination` method of the viewController, it accepts routing publisher and mapping of the route to the destination controller. Your code may look somewhat like this:
+
+```swift
+enum MyFeatureDestination {
+  case details
+}
+
+@RoutingController
+final class MyViewController: UIViewController {
+  @PresentationDestination
+  var detailsController: DetailsViewController?
+
+  func bindViewModel() {
+    presentationDestination(
+      viewModel.publisher(for: \.state.destination),
+      switch: { destinations, route in
+        switch route {
+        case .details:
+          destinations.$detailsController
+        }
+      },
+      onDismiss: capture { _self in 
+        _self.viewModel.send(.dismiss)
+      }
+    ).store(in: &cancellables)
+  }
+}
+```
+
+or
+
+```swift
+enum MyFeatureState {
+  // ...
+  var details: DetailsState?
+}
+
+final class MyViewController: UIViewController {
+  @PresentationDestination
+  var detailsController: DetailsViewController?
+  
+  func bindViewModel() {
+    presentationDestination(
+      "my_feature_details"
+      isPresented: viewModel.publisher(for: \.state.detais.isNotNil),
+      destination: $detailsController,
+      onDismiss: capture { $0.viewModel.send(.dismiss) }
+    ).store(in: &cancellables)
+  }
+}
+```
 
 ## Installation
 

@@ -69,14 +69,7 @@ open class StackDestination<
 	open class func initController(
 		for id: DestinationID
 	) -> Controller {
-		if
-			let controllerType = (Controller.self as? DestinationInitializableControllerProtocol.Type),
-			let controller = controllerType._init_for_destination() as? Controller
-		{
-			return controller
-		} else {
-			return Controller()
-		}
+		return __initializeDestinationController()
 	}
 
 	@_spi(Internals)
@@ -91,13 +84,16 @@ open class StackDestination<
 
 	/// Creates a new instance with instance-specific override for creating a new controller
 	///
-	/// This override has the highest priority when creating a new controller, default one is just `Controller()`
-	/// **which can lead to crashes if controller doesn't have an empty init**
-	///
 	/// Default implementation is suitable for most controllers, however if you have a controller which
 	/// doesn't have a custom init you'll have to use this method or if you have a base controller that
 	/// requires custom init it'll be beneficial for you to create a custom subclass of StackDestination
 	/// and override it's `initController` class method, you can find an example in tests.
+	///
+	/// - Parameters:
+	///   - initControllerOverride:
+	///   This override has the highest priority when creating a new controller, default one is just `Controller()`
+	///   **which can lead to crashes if controller doesn't have an empty init**.
+	///   *Consider using `DestinationInitializableControllerProtocol` if possible instead of this parameter*
 	@inlinable
 	public convenience init(_ initControllerOverride: @escaping (DestinationID) -> Controller) {
 		self.init()
@@ -132,10 +128,3 @@ open class StackDestination<
 	}
 }
 #endif
-
-/*
-- Add erased protocols for Tree/StackDestination with some cleanup function
-- Make RoutingController.destinations method return an instance of the protocol
-- In CocoaViewController+API.swift add custom navigationStack/Destination methods
-- Those methods will inject cleanup function call into onPop handler
-*/

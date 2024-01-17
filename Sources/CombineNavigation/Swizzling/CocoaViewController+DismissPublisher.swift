@@ -6,7 +6,10 @@ import FoundationExtensions
 
 extension CocoaViewController {
 	@AssociatedObject(readonly: true)
-	fileprivate var dismissSubject: PassthroughSubject<Void, Never> = .init()
+	fileprivate var selfDismissSubject: PassthroughSubject<Void, Never> = .init()
+
+	@AssociatedObject(readonly: true)
+	fileprivate var dismissSubject: PassthroughSubject<[CocoaViewController], Never> = .init()
 
 	/// Publisher for dismiss
 	///
@@ -14,9 +17,20 @@ extension CocoaViewController {
 	///
 	/// > It has different behavior from simply observing `dismiss(animated:completion:)`
 	/// > selector, the publisher is always called on the dismissed controller
+	/// >
+	/// > If you need to observe `dismiss(animated:completion:)` selector
+	/// > use `dismissPublisher`
 	///
 	/// Underlying subject is triggered by swizzled methods in `CombineNavigation` module.
-	public var dismissPublisher: some Publisher<Void, Never> {
+	public var selfDismissPublisher: some Publisher<Void, Never> {
+		return selfDismissSubject
+	}
+
+	/// Publisher for dismiss
+	///
+	/// Emits an array of dismissed controllers.
+	/// If there was no `presentedViewController`s it will emit `[self]` instead
+	public var dismissPublisher: some Publisher<[CocoaViewController], Never> {
 		return dismissSubject
 	}
 }
@@ -43,10 +57,27 @@ extension CocoaViewController {
 //		animated: Bool,
 //		completion: (() -> Void)? = nil
 //	) {
-//		dismiss(animated: animated) {
-//			self.dismissSubject.send(())
+//		let presentationStack = _presentationStack ?? [self]
+//
+//		let _notifySubjects = {
+//			self.dismissSubject.send(presentationStack)
+//
+//			presentationStack
+//				.reversed()
+//				.forEach { $0.selfDismissSubject.send(()) }
+//		}
+//
+//		let _completion = {
+//			_notifySubjects()
 //			completion?()
 //		}
+//
+//		#if canImport(XCTest)
+//		dismiss(animated: animated, completion: nil)
+//		if !NavigationAnimation.$isEnabled.get() { _completion() }
+//		#else
+//		dismiss(animated: animated, completion: _completion)
+//		#endif
 //	}
 //}
 
@@ -63,12 +94,31 @@ extension CocoaViewController {
 		animated: Bool,
 		completion: (() -> Void)?
 	) {
-		#warning("Handle dismiss for all nested presentations")
-		let dismissedController: UIViewController = presentedViewController ?? self
-		__swizzledDismiss(animated: animated, completion: {
-			dismissedController.dismissSubject.send(())
+		let presentationStack = _presentationStack ?? [self]
+
+		let _notifySubjects = {
+			self.dismissSubject.send(presentationStack)
+
+			presentationStack
+				.reversed()
+				.forEach { $0.selfDismissSubject.send(()) }
+		}
+
+		let _completion = {
+			_notifySubjects()
 			completion?()
-		})
+		}
+
+		#if canImport(XCTest)
+		__swizzledDismiss(animated: animated, completion: nil)
+		if !NavigationAnimation.$isEnabled.get() { _completion() }
+		#else
+		__swizzledDismiss(animated: animated, completion: _completion)
+		#endif
+	}
+
+	private var _presentationStack: [CocoaViewController]? {
+		presentedViewController.map { [$0] + ($0._presentationStack ?? []) }
 	}
 }
 #endif

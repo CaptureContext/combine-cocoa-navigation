@@ -6,7 +6,7 @@ import Combine
 
 #if canImport(UIKit) && !os(watchOS)
 
-// TODO: Test deinitialization
+// TODO: Test destinations deinitialization
 // Note: Manual check succeed ✅
 
 final class RoutingControllerStackTests: XCTestCase {
