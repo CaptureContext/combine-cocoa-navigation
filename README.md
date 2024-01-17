@@ -178,7 +178,9 @@ enum MyFeatureState {
 }
 
 final class MyViewController: UIViewController {
-  @PresentationDestination
+  // You can also wrap presented controller in a container controller
+  // by passing `PresentationDestinationContainerProvider`
+  @PresentationDestination(container: .navigation)
   var detailsController: DetailsViewController?
   
   func bindViewModel() {
