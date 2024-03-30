@@ -1,15 +1,14 @@
 @_spi(Reflection) import CasePaths
 
 /// Index of enum case in its declaration
-@usableFromInline
-internal func enumTag<Case>(_ `case`: Case) -> UInt32? {
+@_spi(Internals)
+public func enumTag<Case>(_ `case`: Case) -> UInt32? {
 	EnumMetadata(Case.self)?.tag(of: `case`)
 }
 
 extension Optional {
 	/// Index of enum case in its declaration
-	@usableFromInline
-	internal static func compareTagsEqual(
+	public static func __compareEnumTagsEqual(
 		lhs: Self,
 		rhs: Self
 	) -> Bool {

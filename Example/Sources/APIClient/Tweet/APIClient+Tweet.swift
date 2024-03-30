@@ -2,7 +2,7 @@ import LocalExtensions
 import AppModels
 
 extension APIClient {
-	public struct Tweet {
+	public struct Tweet: ClientOperationsGroup {
 		public init(
 			fetch: Operations.Fetch,
 			like: Operations.Like,
@@ -39,12 +39,9 @@ extension APIClient.Tweet {
 }
 
 extension APIClient.Tweet.Operations {
-	public struct Fetch {
+	public struct Fetch: ClientOperation {
 		public typealias Input = USID
-
 		public typealias Output = Result<TweetModel, APIClient.Error>
-
-		public typealias AsyncSignature = @Sendable (Input) async -> Output
 
 		public var asyncCall: AsyncSignature
 
@@ -59,15 +56,13 @@ extension APIClient.Tweet.Operations {
 		}
 	}
 
-	public struct Like {
+	public struct Like: ClientOperation {
 		public typealias Input = (
 			id: USID,
 			value: Bool
 		)
 
 		public typealias Output = Result<Void, APIClient.Error>
-
-		public typealias AsyncSignature = @Sendable (Input) async -> Output
 
 		public var asyncCall: AsyncSignature
 
@@ -83,15 +78,13 @@ extension APIClient.Tweet.Operations {
 		}
 	}
 
-	public struct Repost {
+	public struct Repost: ClientOperation {
 		public typealias Input = (
 			id: USID,
 			content: String
 		)
 
 		public typealias Output = Result<Void, APIClient.Error>
-
-		public typealias AsyncSignature = @Sendable (Input) async -> Output
 
 		public var asyncCall: AsyncSignature
 
@@ -107,12 +100,9 @@ extension APIClient.Tweet.Operations {
 		}
 	}
 
-	public struct Delete {
+	public struct Delete: ClientOperation {
 		public typealias Input = USID
-
 		public typealias Output = Result<Void, APIClient.Error>
-
-		public typealias AsyncSignature = @Sendable (Input) async -> Output
 
 		public var asyncCall: AsyncSignature
 
@@ -127,12 +117,9 @@ extension APIClient.Tweet.Operations {
 		}
 	}
 
-	public struct Report {
+	public struct Report: ClientOperation {
 		public typealias Input = USID
-
 		public typealias Output = Result<Void, APIClient.Error>
-
-		public typealias AsyncSignature = @Sendable (Input) async -> Output
 
 		public var asyncCall: AsyncSignature
 
@@ -147,15 +134,13 @@ extension APIClient.Tweet.Operations {
 		}
 	}
 
-	public struct Reply {
+	public struct Reply: ClientOperation {
 		public typealias Input = (
 			id: USID,
 			content: String
 		)
 
 		public typealias Output = Result<Void, APIClient.Error>
-
-		public typealias AsyncSignature = @Sendable (Input) async -> Output
 
 		public var asyncCall: AsyncSignature
 
@@ -171,12 +156,9 @@ extension APIClient.Tweet.Operations {
 		}
 	}
 
-	public struct Post {
+	public struct Post: ClientOperation {
 		public typealias Input = String
-
 		public typealias Output = Result<Void, APIClient.Error>
-
-		public typealias AsyncSignature = @Sendable (Input) async -> Output
 
 		public var asyncCall: AsyncSignature
 
@@ -191,7 +173,7 @@ extension APIClient.Tweet.Operations {
 		}
 	}
 
-	public struct FetchReplies {
+	public struct FetchReplies: ClientOperation {
 		public typealias Input = (
 			id: USID,
 			page: Int,
@@ -199,8 +181,6 @@ extension APIClient.Tweet.Operations {
 		)
 
 		public typealias Output = Result<[TweetModel], APIClient.Error>
-
-		public typealias AsyncSignature = @Sendable (Input) async -> Output
 
 		public var asyncCall: AsyncSignature
 

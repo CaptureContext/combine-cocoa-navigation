@@ -2,7 +2,7 @@
 import CocoaAliases
 
 public func bootstrap() {
-	CocoaViewController.bootstrapDismissPublisher
+	CocoaViewController.bootstrapAutomaticBindingForRouters
 	UINavigationController.bootstrapPopPublisher
 }
 #endif

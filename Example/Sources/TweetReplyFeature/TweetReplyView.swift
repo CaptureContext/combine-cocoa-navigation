@@ -29,10 +29,17 @@ public struct TweetReplyView: ComposableView {
 			 .padding(.horizontal)
 		 }
 		.toolbar {
-			Button("Tweet") {
-				store.send(.tweet)
+			ToolbarItemGroup(placement: .topBarLeading) {
+				Button("Close") {
+					store.send(.close)
+				}
 			}
-			.disabled(store.replyText.isEmpty)
+			ToolbarItemGroup(placement: .topBarTrailing) {
+				Button("Tweet") {
+					store.send(.tweet)
+				}
+				.disabled(store.replyText.isEmpty)
+			}
 		}
 		.toolbarRole(.navigationStack)
 		.onAppear { focused = true }
@@ -57,10 +64,6 @@ public struct TweetReplyView: ComposableView {
 			.focused($focused)
 			.textEditorStyle(PlainTextEditorStyle())
 			.scrollDisabled(true)
-			Button(action: { store.send(.tweet) }) {
-				Image(systemName: "paperplane.fill")
-			}
-			.frame(width: 32, height: 32)
 		}
 	}
 

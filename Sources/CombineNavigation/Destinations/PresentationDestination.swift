@@ -2,7 +2,7 @@
 import Capture
 import CocoaAliases
 import Combine
-import FoundationExtensions
+import FoundationExtensionsMacros
 
 public protocol _PresentationDestinationProtocol: AnyObject {
 	@_spi(Internals)
@@ -155,7 +155,7 @@ public struct PresentationDestinationContainerProvider<
 extension PresentationDestinationContainerProvider {
 	@inlinable
 	public static var navigation: Self {
-		.init(UINavigationController.init(rootViewController:))
+		return .init(UINavigationController.init(rootViewController:))
 	}
 }
 #endif

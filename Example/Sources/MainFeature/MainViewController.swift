@@ -34,8 +34,6 @@ public final class MainViewController: ComposableTabBarControllerOf<MainFeature>
 			}
 		)
 
-		feedNavigation.navigationBar.prefersLargeTitles = true
-
 		setViewControllers(
 			[
 				feedNavigation,

@@ -2,7 +2,7 @@
 import Capture
 import CocoaAliases
 import Combine
-import FoundationExtensions
+import FoundationExtensionsMacros
 
 public protocol _TreeDestinationProtocol: AnyObject {
 	@_spi(Internals)

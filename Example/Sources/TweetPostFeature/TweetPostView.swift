@@ -49,10 +49,6 @@ public struct TweetPostView: ComposableView {
 			.focused($focused)
 			.textEditorStyle(PlainTextEditorStyle())
 			.scrollDisabled(true)
-			Button(action: { store.send(.tweet) }) {
-				Image(systemName: "paperplane.fill")
-			}
-			.frame(width: 32, height: 32)
 		}
 	}
 

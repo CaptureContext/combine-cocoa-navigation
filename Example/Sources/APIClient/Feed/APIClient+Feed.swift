@@ -2,7 +2,7 @@ import LocalExtensions
 import AppModels
 
 extension APIClient {
-	public struct Feed {
+	public struct Feed: ClientOperationsGroup {
 		public init(fetchTweets: Operations.FetchTweets) {
 			self.fetchTweets = fetchTweets
 		}
@@ -16,15 +16,13 @@ extension APIClient.Feed {
 }
 
 extension APIClient.Feed.Operations {
-	public struct FetchTweets {
+	public struct FetchTweets: ClientOperation {
 		public typealias Input = (
 			page: Int,
 			limit: Int
 		)
 
 		public typealias Output = Result<[TweetModel], APIClient.Error>
-
-		public typealias AsyncSignature = @Sendable (Input) async -> Output
 
 		public var asyncCall: AsyncSignature
 

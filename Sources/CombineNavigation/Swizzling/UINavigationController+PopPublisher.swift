@@ -1,13 +1,10 @@
 #if canImport(UIKit) && !os(watchOS)
 import Capture
 import CocoaAliases
-import Combine
-import FoundationExtensions
+import CombineCocoa
+import FoundationExtensionsMacros
 
-extension UINavigationController {
-	@AssociatedObject(readonly: true)
-	private var popSubject: PassthroughSubject<[CocoaViewController], Never> = .init()
-
+extension PublishersProxy where Base: UINavigationController {
 	/// Publisher for popped controllers
 	///
 	/// Emits an event on calls of:
@@ -21,12 +18,22 @@ extension UINavigationController {
 	/// > On interactive pop an event will be emitted  only when the pop is finished and is not cancelled
 	///
 	/// > Is not called when `viewControllers` property is mutated directly
-	public var popPublisher: some Publisher<[CocoaViewController], Never> {
-		return popSubject
+	public var didPopControllers: some Publisher<[CocoaViewController], Never> {
+		base.popSubject
 	}
+}
+
+extension UINavigationController {
+	@AssociatedObject(readonly: true)
+	fileprivate var popSubject: PassthroughSubject<[CocoaViewController], Never> = .init()
 
 	fileprivate func handlePop(of controllers: [CocoaViewController]) {
-		handlePop { self.popSubject.send(controllers) }
+		handlePop {
+			self.popSubject.send(controllers)
+			controllers.map(\.combineNavigationRouter).forEach { router in
+				router.removeFromParent()
+			}
+		}
 	}
 
 	private func handlePop(_ onPop: @escaping () -> Void) {
@@ -160,5 +167,6 @@ extension UINavigationController {
 		__swizzledSetViewControllers(controllers, animated: animated)
 		handlePop(of: poppedControllers)
 	}
+
 }
 #endif

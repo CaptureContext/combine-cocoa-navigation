@@ -33,11 +33,14 @@ final class RoutingControllePresentationTests: XCTestCase {
 			viewModel.state.value.destination = .orderDetail()
 			XCTAssertEqual(controller._topPresentedController, controller.orderDetailController)
 
+			viewModel.state.value.destination = .feedback()
+			XCTAssertEqual(controller._topPresentedController, controller.feedbackController)
+
 			controller.dismiss()
 			XCTAssertEqual(viewModel.state.value.destination, .none)
 
-			viewModel.state.value.destination = .feedback()
-			XCTAssertEqual(controller._topPresentedController, controller.feedbackController)
+			viewModel.state.value.destination = .orderDetail()
+			XCTAssertEqual(controller._topPresentedController, controller.orderDetailController)
 
 			viewModel.state.value.destination = .none
 			XCTAssertEqual(controller._topPresentedController, controller)

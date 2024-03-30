@@ -13,6 +13,13 @@ extension APIClient: DependencyKey {
 			tweet: .backendLike(),
 			user: .backendLike()
 		)
+		// some hardcoded network conditioning :D
+		.with(\.feed.fetchTweets,		delayedBy: .random(in: 0...1))
+		.with(\.tweet.post,					delayedBy: .random(in: 0...1))
+		.with(\.tweet.reply,				delayedBy: .random(in: 0...1))
+		.with(\.tweet.fetchReplies,	delayedBy: .random(in: 0...1))
+		.with(\.feed.fetchTweets,		delayedBy: .random(in: 0...1))
+		.with(\.user.follow,				delayedBy: .random(in: 0...1))
 	}
 }
 

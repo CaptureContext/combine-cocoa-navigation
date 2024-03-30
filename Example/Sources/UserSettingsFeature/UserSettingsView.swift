@@ -1,8 +1,12 @@
 import _ComposableArchitecture
 import SwiftUI
+import AppUI
 
 public struct UserSettingsView: ComposableView {
-	let store: StoreOf<UserSettingsFeature>
+	private let store: StoreOf<UserSettingsFeature>
+
+	@Environment(\.colorTheme)
+	var colorTheme
 
 	public init(_ store: StoreOf<UserSettingsFeature>) {
 		self.store = store
@@ -10,6 +14,11 @@ public struct UserSettingsView: ComposableView {
 
 	public var body: some View {
 		Text(store.id.usidString)
+		Button("Logout") {
+			store.send(.logout)
+		}
+		.tint(colorTheme(\.destructive))
+		.bold()
 	}
 }
 

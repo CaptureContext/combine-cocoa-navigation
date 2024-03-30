@@ -78,18 +78,32 @@ public struct ProfileTabFeature {
 	@Dependency(\.apiClient)
 	var apiClient
 
+  @Dependency(\.mainQueue)
+  var mainQueue
+
 	public var body: some ReducerOf<Self> {
 		Pullback(\.event.didAppear) { state in
-			return .publisher {
-				currentUser.idPublisher
-					.map(Action.Event.didChangeUserID)
-					.map(Action.event)
-			}
+			struct CancellationID: Hashable {}
+			let cancellationID = CancellationID()
+			return .concatenate(
+				.cancel(id: cancellationID),
+				.publisher {
+					currentUser.idPublisher
+            .receive(on: mainQueue)
+						.map(Action.Event.didChangeUserID)
+						.map(Action.event)
+				}
+				.cancellable(id: cancellationID)
+			)
 		}
-		Pullback(\.event.didChangeUserID) { state, id in
+		Pullback(\.event.didChangeUserID) { (state: inout State, id: USID?) in
 			guard let id else {
-				return .send(.root(.setState(.auth(.signIn()))))
+				state.path.removeAll()
+				return .send(.root(.setState(.auth(.signIn(.init(username: "capturecontext", password: "psswrd"))))))
 			}
+
+			// no changes
+			if state.root.profile?.model.id == id { return .none }
 
 			return .run { send in
 				switch await apiClient.user.fetch(id: id) {
@@ -98,7 +112,7 @@ public struct ProfileTabFeature {
 
 				case let .failure(error):
 					#warning("Handle error with alert")
-					await send(.root(.setState(.auth(.signIn()))))
+          await send(.root(.setState(.auth(.signIn(.init(username: "capturecontext", password: "psswrd"))))))
 				}
 			}
 		}

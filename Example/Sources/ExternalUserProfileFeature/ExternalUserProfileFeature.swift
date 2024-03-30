@@ -1,7 +1,8 @@
 import _ComposableArchitecture
 import LocalExtensions
 import AppModels
-import TweetsListFeature
+import TweetsFeedFeature
+import UserSettingsFeature
 
 @Reducer
 public struct ExternalUserProfileFeature {
@@ -10,41 +11,50 @@ public struct ExternalUserProfileFeature {
 	@ObservableState
 	public struct State: Equatable {
 		public var model: UserInfoModel
-		public var tweetsList: TweetsListFeature.State
+
+		public var feed: TweetsFeedFeature.State
 
 		@Presents
-		public var avatarPreview: URL?
+		public var presentationDestination: PresentationDestination.State?
 
 		public init(
 			model: UserInfoModel,
-			tweetsList: TweetsListFeature.State = .init()
+			feed: TweetsFeedFeature.State = .init(),
+			presentationDestination: PresentationDestination.State? = nil
 		) {
 			self.model = model
-			self.tweetsList = tweetsList
+			self.feed = feed
+			self.presentationDestination = presentationDestination
+
+			do { // additional setup
+				self.feed.dataSource = .user(model.id)
+			}
 		}
 	}
 
 	@CasePathable
 	public enum Action: Equatable {
-		case avatarPreview(PresentationAction<Never>)
-		case tweetsList(TweetsListFeature.Action)
-		case tapOnAvatar
 		case tapFollow
+		case feed(TweetsFeedFeature.Action)
+		case presentationDestination(PresentationAction<PresentationDestination.Action>)
+		case tapOnAvatar
 		case delegate(Delegate)
 
 		@CasePathable
 		public enum Delegate: Equatable {
-			case openDetail(USID)
 			case openProfile(USID)
 		}
 	}
 
+	@inlinable
 	public var body: some ReducerOf<Self> {
 		CombineReducers {
 			Reduce { state, action in
 				switch action {
 				case .tapOnAvatar:
-					state.avatarPreview = state.model.avatarURL
+					guard let avatarURL = state.model.avatarURL
+					else { return .none}
+					state.presentationDestination = .avatarPreivew(avatarURL)
 					return .none
 
 				case .tapFollow:
@@ -55,29 +65,49 @@ public struct ExternalUserProfileFeature {
 					return .none
 				}
 			}
-			Reduce { state, action in
-				switch action {
-				case let .tweetsList(.delegate(.openDetail(id))):
-					return .send(.delegate(.openDetail(id)))
 
-				case let .tweetsList(.delegate(.openProfile(id))):
-					guard id != state.model.id else { return .none }
-					return .send(.delegate(.openProfile(id)))
-
-				default:
-					return .none
-				}
+			Pullback(\.feed.delegate.openProfile) { state, id in
+				guard id != state.model.id else { return .none }
+				return .send(.delegate(.openProfile(id)))
 			}
+
+			Scope(
+				state: \.feed,
+				action: \.feed,
+				child: TweetsFeedFeature.init
+			)
 		}
 		.ifLet(
-			\State.$avatarPreview,
-			 action: \.avatarPreview,
-			 destination: {}
+			\.$presentationDestination,
+			action: \.presentationDestination,
+			destination: PresentationDestination.init
 		)
-		Scope(
-			state: \.tweetsList,
-			action: \.tweetsList,
-			child: TweetsListFeature.init
-		)
+	}
+}
+
+extension ExternalUserProfileFeature {
+	@Reducer
+	public struct PresentationDestination {
+		public init() {}
+
+		@ObservableState
+		public enum State: Equatable {
+			case avatarPreivew(URL)
+			case userSettings(UserSettingsFeature.State)
+		}
+
+		@CasePathable
+		public enum Action: Equatable {
+			case avatarPreivew(Never)
+			case userSettings(UserSettingsFeature.Action)
+		}
+
+		public var body: some ReducerOf<Self> {
+			Scope(
+				state: \.userSettings,
+				action: \.userSettings,
+				child: UserSettingsFeature.init
+			)
+		}
 	}
 }

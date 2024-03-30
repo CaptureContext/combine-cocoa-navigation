@@ -1,6 +1,6 @@
 import CocoaAliases
 
-#if canImport(UIKit) && !os(watchOS)
+#if canImport(XCTest) && canImport(UIKit) && !os(watchOS)
 
 /// Overrides presentation behaviour specifically
 /// for being able to test sequential present/dismiss calls
@@ -24,6 +24,8 @@ open class AppleSpaghettiCodeTestableController: CocoaViewController {
 		_presentedViewController
 	}
 
+	@objc dynamic func wasDismissed() {}
+
 	override open func present(
 		_ viewControllerToPresent: CocoaViewController,
 		animated flag: Bool,
@@ -44,17 +46,21 @@ open class AppleSpaghettiCodeTestableController: CocoaViewController {
 		if let presentedViewController {
 			super.dismiss(animated: flag)
 			self._presentedViewController = nil
-			(presentedViewController as? AppleSpaghettiCodeTestableController)?._presentingViewController = nil
+			let dismissedController = presentedViewController as? AppleSpaghettiCodeTestableController
+			dismissedController?._presentingViewController = nil
+			dismissedController?.wasDismissed()
 			completion?()
 		} else if let presentingViewController = presentingViewController as? AppleSpaghettiCodeTestableController {
 			presentingViewController.dismiss(animated: flag, completion: completion)
 		} else if let presentingViewController {
 			presentingViewController.dismiss(animated: flag, completion: {
 				self._presentingViewController = nil
+				self.wasDismissed()
 				completion?()
 			})
 		} else {
 			self._presentingViewController = nil
+			self.wasDismissed()
 			completion?()
 		}
 	}
@@ -62,11 +68,7 @@ open class AppleSpaghettiCodeTestableController: CocoaViewController {
 
 extension CocoaViewController {
 	var _topPresentedController: CocoaViewController? {
-		if let presentedViewController {
-			return presentedViewController._topPresentedController
-		} else {
-			return self
-		}
+		presentedViewController?._topPresentedController ?? self
 	}
 }
 #endif

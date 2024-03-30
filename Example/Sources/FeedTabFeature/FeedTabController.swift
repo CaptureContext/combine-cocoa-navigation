@@ -20,24 +20,32 @@ public final class FeedTabController: ComposableViewControllerOf<FeedTabFeature>
 		self.view = ContentView()
 	}
 
-	@ComposableViewPresentationDestination<TweetPostView>
-	var postTweetController
+	@ComposablePresentationDestination(container: .navigation)
+	var postTweetController: ComposableHostingController<TweetPostView>?
 
 	@ComposableStackDestination<TweetsFeedController>
 	var feedControllers
 
-	@ComposableViewStackDestination<UserProfileView>
+	@ComposableStackDestination<UserProfileController>
 	var profileControllers
 
 	public override func viewDidLoad() {
 		super.viewDidLoad()
 
+		navigationController?.navigationBar.prefersLargeTitles = true
+		navigationItem.largeTitleDisplayMode = .always
+
 		// For direct children this method is used instead of addChild
-		self.addRoutedChild(contentController)
+		addChild(contentController)
 		self.contentView?.contentView.addSubview(contentController.view)
 		contentController.view.pinToSuperview()
 		contentController.didMove(toParent: self)
 	}
+
+  public override func viewDidAppear(_ animated: Bool) {
+    super.viewDidAppear(animated)
+    store?.send(.event(.didAppear))
+  }
 
 	public override func scope(_ store: Store?) {
 		contentController.setStore(store?.scope(
@@ -73,9 +81,14 @@ public final class FeedTabController: ComposableViewControllerOf<FeedTabFeature>
 			_self.store?.send(.tweet)
 		})
 
-		#warning("Should introduce an API to wrap controller in Navigation")
+    publisher.isFeedButtonVisible
+      .sinkValues(capture { _self, isVisible in
+        _self.contentView.tweetButton.isHidden = !isVisible
+      })
+      .store(in: &cancellables)
+
 		presentationDestination(
-			isPresented: \.$postTweet.wrappedValue.isNotNil,
+			isPresented: \.postTweet.isNotNil,
 			destination: $postTweetController,
 			dismissAction: .postTweet(.dismiss)
 		)

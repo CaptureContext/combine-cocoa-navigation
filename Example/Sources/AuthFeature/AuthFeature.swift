@@ -28,6 +28,14 @@ public struct AuthFeature {
 				action: \.signUp,
 				child: SignUp.init
 			)
+			Pullback(\.signIn.signUpButtonTapped) { state in
+				state = .signUp()
+				return .none
+			}
+			Pullback(\.signUp.signInButtonTapped) { state in
+				state = .signIn()
+				return .none
+			}
 		}
 	}
 }

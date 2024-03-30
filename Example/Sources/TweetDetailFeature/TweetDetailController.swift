@@ -14,8 +14,10 @@ public final class TweetDetailController: ComposableViewControllerOf<TweetDetail
 	@ComposableTreeDestination
 	var detailController: TweetDetailController?
 
-	@ComposableViewPresentationDestination<TweetReplyView>
-	var tweetReplyController
+	@ComposablePresentationDestination(container: .navigation.container { $0
+		.modalPresentationStyle(.fullScreen)
+	})
+	var tweetReplyController: ComposableHostingController<TweetReplyView>?
 
 	public override func viewDidLoad() {
 		super.viewDidLoad()
@@ -35,13 +37,13 @@ public final class TweetDetailController: ComposableViewControllerOf<TweetDetail
 		host.setStore(store)
 
 		_tweetReplyController.setStore(store?.scope(
-			state: \.tweetReply,
-			action: \..tweetReply.presented
+			state: \.presentationDestination?.tweetReply,
+			action: \.presentationDestination.tweetReply
 		))
 
 		_detailController.setStore(store?.scope(
-			state: \.detail,
-			action: \.detail.presented
+			state: \.navigationDestination?.detail,
+			action: \.navigationDestination.detail
 		))
 	}
 
@@ -50,16 +52,21 @@ public final class TweetDetailController: ComposableViewControllerOf<TweetDetail
 		into cancellables: inout Set<AnyCancellable>
 	) {
 		presentationDestination(
-			isPresented: \.$tweetReply.wrappedValue.isNotNil,
+			isPresented: \.presentationDestination[case: \.tweetReply].isNotNil,
 			destination: $tweetReplyController,
-			dismissAction: .tweetReply(.dismiss)
+			dismissAction: .presentationDestination(.dismiss)
 		)
 		.store(in: &cancellables)
 
 		navigationDestination(
-			isPresented: \.$detail.wrappedValue.isNotNil,
-			destination: _detailController,
-			popAction: .detail(.dismiss)
+			state: \.$navigationDestination,
+			switch: { destinations, route in
+				switch route {
+				case .detail:
+					destinations.$detailController
+				}
+			},
+			popAction: .navigationDestination(.dismiss)
 		)
 		.store(in: &cancellables)
 	}

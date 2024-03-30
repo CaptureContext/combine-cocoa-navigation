@@ -24,6 +24,7 @@ extension AuthFeature {
 
 		public enum Action: Equatable, BindableAction {
 			case signInButtonTapped
+			case signUpButtonTapped
 			case binding(BindingAction<State>)
 			case event(Event)
 

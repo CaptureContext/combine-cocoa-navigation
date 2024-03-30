@@ -32,8 +32,12 @@ let package = Package(
 			.upToNextMajor(from: "2.0.5")
 		),
 		.package(
-			url: "https://github.com/capturecontext/swift-foundation-extensions.git",
+			url: "https://github.com/capturecontext/swift-cocoa-extensions.git",
 			.upToNextMinor(from: "0.4.0")
+		),
+		.package(
+			url: "https://github.com/capturecontext/combine-cocoa.git",
+			 .upToNextMinor(from: "0.2.0")
 		),
 		.package(
 			url: "https://github.com/pointfreeco/swift-case-paths",
@@ -66,8 +70,12 @@ let package = Package(
 					package: "cocoa-aliases"
 				),
 				.product(
-					name: "FoundationExtensions",
-					package: "swift-foundation-extensions"
+					name: "CombineCocoaMacros",
+					package: "combine-cocoa"
+				),
+				.product(
+					name: "CocoaExtensionsMacros",
+					package: "swift-cocoa-extensions"
 				),
 			]
 		),

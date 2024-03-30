@@ -37,9 +37,26 @@ public struct ColorTheme {
 		}
 	}
 
+	public init(
+		accent: UIColor,
+		like: UIColor,
+		done: UIColor,
+		destructive: UIColor,
+		label: ColorSet4,
+		background: ColorSet3
+	) {
+		self.accent = accent
+		self.like = like
+		self.done = done
+		self.destructive = destructive
+		self.label = label
+		self.background = background
+	}
+
 	public let accent: UIColor
 	public let like: UIColor
 	public let done: UIColor
+	public let destructive: UIColor
 
 	public let label: ColorSet4
 	public let background: ColorSet3
@@ -68,6 +85,7 @@ extension ColorTheme {
 		accent: .systemBlue,
 		like: .systemRed,
 		done: .systemGreen,
+		destructive: .systemRed,
 		label: .init(
 			primary: .label,
 			secondary: .secondaryLabel,
@@ -82,9 +100,10 @@ extension ColorTheme {
 	)
 
 	public static let systemTweaked: Self = .init(
-		accent: .systemBlue,
+		accent: .label,
 		like: .systemRed,
 		done: .systemGreen,
+		destructive: .systemRed,
 		label: .init(
 			primary: .label,
 			secondary: .label.withAlphaComponent(0.7),
@@ -114,6 +133,7 @@ extension ColorTheme {
 			accent: color(for: \.accent),
 			like: color(for: \.like),
 			done: color(for: \.done),
+			destructive: color(for: \.destructive),
 			label: .init(
 				primary: color(for: \.label.primary),
 				secondary: color(for: \.label.secondary),
@@ -139,6 +159,5 @@ extension EnvironmentValues {
 }
 
 extension ColorTheme: EnvironmentKey {
-	public static var defaultValue: Self { .systemTweaked }
+	public static let defaultValue: Self = .systemTweaked
 }
-

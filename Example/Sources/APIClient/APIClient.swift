@@ -1,6 +1,6 @@
 import _Dependencies
 
-public struct APIClient {
+public struct APIClient: ClientOperationsGroup {
 	public init(
 		auth: Auth,
 		feed: Feed,

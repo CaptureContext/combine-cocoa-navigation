@@ -2,7 +2,7 @@ import LocalExtensions
 import AppModels
 
 extension APIClient {
-	public struct Auth {
+	public struct Auth: ClientOperationsGroup {
 		public init(
 			signIn: Operations.SignIn,
 			signUp: Operations.SignUp,
@@ -24,15 +24,13 @@ extension APIClient.Auth {
 }
 
 extension APIClient.Auth.Operations {
-	public struct SignIn {
+	public struct SignIn: ClientOperation {
 		public typealias Input = (
 			username: String,
 			password: String
 		)
 
 		public typealias Output = Result<Void, APIClient.Error>
-
-		public typealias AsyncSignature = @Sendable (Input) async -> Output
 
 		public var asyncCall: AsyncSignature
 
@@ -48,15 +46,13 @@ extension APIClient.Auth.Operations {
 		}
 	}
 
-	public struct SignUp {
+	public struct SignUp: ClientOperation {
 		public typealias Input = (
 			username: String,
 			password: String
 		)
 
 		public typealias Output = Result<Void, APIClient.Error>
-
-		public typealias AsyncSignature = @Sendable (Input) async -> Output
 
 		public var asyncCall: AsyncSignature
 
@@ -72,12 +68,10 @@ extension APIClient.Auth.Operations {
 		}
 	}
 
-	public struct Logout {
+	public struct Logout: ClientOperation {
 		public typealias Input = Void
 
 		public typealias Output = Void
-
-		public typealias AsyncSignature = @Sendable (Input) async -> Output
 
 		public var asyncCall: AsyncSignature
 

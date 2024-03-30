@@ -1,4 +1,4 @@
-@_exported import FoundationExtensions
+@_exported import CocoaExtensions
 @_exported import IdentifiedCollections
 @_exported import CombineExtensions
 

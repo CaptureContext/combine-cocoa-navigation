@@ -32,6 +32,7 @@ public struct TweetReplyFeature {
 	@CasePathable
 	public enum Action: Equatable, BindableAction {
 		case binding(BindingAction<State>)
+		case close
 		case tweet
 		case alert(Alert)
 		case event(Event)
@@ -103,58 +104,58 @@ public struct TweetReplyFeature {
 	}
 }
 
-public func injectTweetReply<State, Action: CasePathable>(
-	tweetsState toTweetsState: @escaping (State) -> IdentifiedArrayOf<TweetFeature.State>,
-	tweetsAction toTweetsAction: CaseKeyPath<Action, IdentifiedActionOf<TweetFeature>>,
-	state toPresentationState: WritableKeyPath<State, PresentationState<TweetReplyFeature.State>>,
-	action toPresentationAction: CaseKeyPath<Action, PresentationAction<TweetReplyFeature.Action>>,
-	child: () -> TweetReplyFeature
-) -> some Reducer<State, Action> {
-	CombineReducers {
-		Pullback(toTweetsAction, action: \.reply) { state, id in
-			guard let tweet = toTweetsState(state)[id: id]
-			else { return .none }
-
-			#warning("Use currentUser avatarURL")
-			state[keyPath: toPresentationState].wrappedValue = .init(
-				source: tweet,
-				avatarURL: nil,
-				replyText: "",
-				alert: nil
-			)
-
-			return .none
-		}
-		Pullback(toPresentationAction.appending(
-			path: \.presented.event.didPostTweet.success
-		)) { state, _ in
-			return .send(toPresentationAction(.dismiss))
-		}
-	}
-}
-
-public func injectTweetReply<State, Action: CasePathable>(
-	tweetState toTweetState: @escaping (State) -> TweetFeature.State,
-	tweetAction toTweetAction: CaseKeyPath<Action, TweetFeature.Action>,
-	state toPresentationState: WritableKeyPath<State, PresentationState<TweetReplyFeature.State>>,
-	action toPresentationAction: CaseKeyPath<Action, PresentationAction<TweetReplyFeature.Action>>,
-	child: () -> TweetReplyFeature
-) -> some Reducer<State, Action> {
-	CombineReducers {
-		Pullback(toTweetAction.appending(path: \.reply)) { state in
-			 #warning("Use currentUser avatarURL")
-			 state[keyPath: toPresentationState].wrappedValue = .init(
-				 source: toTweetState(state),
-				 avatarURL: nil,
-				 replyText: "",
-				 alert: nil
-			 )
-			 return .none
-		 }
-		 Pullback(toPresentationAction.appending(
-			path: \.presented.event.didPostTweet.success
-		 )) { state, _ in
-			 return .send(toPresentationAction(.dismiss))
-		 }
-	}
-}
+//public func injectTweetReply<State, Action: CasePathable>(
+//	tweetsState toTweetsState: @escaping (State) -> IdentifiedArrayOf<TweetFeature.State>,
+//	tweetsAction toTweetsAction: CaseKeyPath<Action, IdentifiedActionOf<TweetFeature>>,
+//	state toPresentationState: WritableKeyPath<State, PresentationState<TweetReplyFeature.State>>,
+//	action toPresentationAction: CaseKeyPath<Action, PresentationAction<TweetReplyFeature.Action>>,
+//	child: () -> TweetReplyFeature
+//) -> some Reducer<State, Action> {
+//	CombineReducers {
+//		Pullback(toTweetsAction, action: \.reply) { state, id in
+//			guard let tweet = toTweetsState(state)[id: id]
+//			else { return .none }
+//
+//			#warning("Use currentUser avatarURL")
+//			state[keyPath: toPresentationState].wrappedValue = .init(
+//				source: tweet,
+//				avatarURL: nil,
+//				replyText: "",
+//				alert: nil
+//			)
+//
+//			return .none
+//		}
+//		Pullback(toPresentationAction.appending(
+//			path: \.presented.event.didPostTweet.success
+//		)) { state, _ in
+//			return .send(toPresentationAction(.dismiss))
+//		}
+//	}
+//}
+//
+//public func injectTweetReply<State, Action: CasePathable>(
+//	tweetState toTweetState: @escaping (State) -> TweetFeature.State,
+//	tweetAction toTweetAction: CaseKeyPath<Action, TweetFeature.Action>,
+//	state toPresentationState: WritableKeyPath<State, PresentationState<TweetReplyFeature.State>>,
+//	action toPresentationAction: CaseKeyPath<Action, PresentationAction<TweetReplyFeature.Action>>,
+//	child: () -> TweetReplyFeature
+//) -> some Reducer<State, Action> {
+//	CombineReducers {
+//		Pullback(toTweetAction.appending(path: \.reply)) { state in
+//			 #warning("Use currentUser avatarURL")
+//			 state[keyPath: toPresentationState].wrappedValue = .init(
+//				 source: toTweetState(state),
+//				 avatarURL: nil,
+//				 replyText: "",
+//				 alert: nil
+//			 )
+//			 return .none
+//		 }
+//		 Pullback(toPresentationAction.appending(
+//			path: \.presented.event.didPostTweet.success
+//		 )) { state, _ in
+//			 return .send(toPresentationAction(.dismiss))
+//		 }
+//	}
+//}

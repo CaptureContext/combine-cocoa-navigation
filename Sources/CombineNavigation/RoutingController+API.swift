@@ -2,7 +2,7 @@
 import Capture
 import CocoaAliases
 import Combine
-import FoundationExtensions
+import FoundationExtensionsMacros
 
 // MARK: - Public API
 
@@ -10,7 +10,6 @@ import FoundationExtensions
 
 extension RoutingController {
 	/// Subscribes on publisher of navigation stack state
-	@inlinable
 	public func navigationStack<
 		P: Publisher,
 		C: Collection & Equatable,
@@ -34,7 +33,6 @@ extension RoutingController {
 	}
 
 	/// Subscribes on publisher of navigation stack state
-	@inlinable
 	public func navigationStack<
 		P: Publisher,
 		Stack,
@@ -65,7 +63,6 @@ extension RoutingController {
 
 extension RoutingController {
 	/// Subscribes on publisher of navigation destination state
-	@inlinable
 	public func navigationDestination<P: Publisher>(
 		_ id: AnyHashable,
 		isPresented publisher: P,
@@ -84,9 +81,9 @@ extension RoutingController {
 	}
 
 	/// Subscribes on publisher of navigation destination state
-	@inlinable
 	public func navigationDestination<P: Publisher, Route>(
 		_ publisher: P,
+		removeDuplicates isDuplicate: @escaping (P.Output, P.Output) -> Bool = Optional.__compareEnumTagsEqual,
 		switch destination: @escaping (Destinations, Route) -> _TreeDestinationProtocol,
 		onPop: @escaping () -> Void
 	) -> AnyCancellable where
@@ -95,6 +92,7 @@ extension RoutingController {
 	{
 		combineNavigationRouter.navigationDestination(
 			publisher,
+			removeDuplicates: isDuplicate,
 			switch: destinations(destination),
 			onPop: onPop
 		)
@@ -104,7 +102,6 @@ extension RoutingController {
 // MARK: - presentationDestination
 
 extension RoutingController {
-	@inlinable
 	public func presentationDestination<P: Publisher>(
 		_ id: AnyHashable,
 		isPresented publisher: P,
@@ -122,9 +119,9 @@ extension RoutingController {
 		)
 	}
 
-	@inlinable
 	public func presentationDestination<P: Publisher, Route>(
 		_ publisher: P,
+		removeDuplicates isDuplicate: @escaping (P.Output, P.Output) -> Bool = Optional.__compareEnumTagsEqual,
 		switch destination: @escaping (Destinations, Route) -> _PresentationDestinationProtocol,
 		onDismiss: @escaping () -> Void
 	) -> AnyCancellable where
@@ -133,6 +130,7 @@ extension RoutingController {
 	{
 		combineNavigationRouter.presentationDestination(
 			publisher,
+			removeDuplicates: isDuplicate,
 			switch: destinations(destination),
 			onDismiss: onDismiss
 		)

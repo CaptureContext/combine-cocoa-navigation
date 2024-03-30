@@ -25,6 +25,7 @@ public class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 		let controller = MainViewController()
 
 		let window = UIWindow(windowScene: scene)
+		window.tintColor = ColorTheme.defaultValue.accent
 		self.window = window
 
 		window.rootViewController = controller

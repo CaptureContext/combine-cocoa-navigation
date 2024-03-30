@@ -2,7 +2,7 @@ import XCTest
 import CocoaAliases
 import Capture
 import Combine
-import FoundationExtensions
+import FoundationExtensionsMacros
 @testable import CombineNavigation
 
 #if canImport(UIKit) && !os(watchOS)
@@ -15,9 +15,8 @@ final class DismissPublisherTests: XCTestCase {
 	func testMain() {
 		let expectation1 = self.expectation(description: "1 should track dismissal")
 		let expectation2 = self.expectation(description: "2 should track dismissal")
-		let expectation3 = self.expectation(description: "Root should track dimsissal")
-		expectation1.expectedFulfillmentCount = 2
-		expectation2.expectedFulfillmentCount = 2
+		expectation1.expectedFulfillmentCount = 1
+		expectation2.expectedFulfillmentCount = 1
 
 		@Box
 		var dismissCancellables: [ObjectIdentifier: AnyCancellable] = [:]
@@ -37,7 +36,7 @@ final class DismissPublisherTests: XCTestCase {
 			XCTAssertNil(root.presentedViewController)
 
 			dismissCancellables[detail.objectID] = detail
-				.selfDismissPublisher
+				.publishers._testableDismissed
 				.sink { expectation.fulfill() }
 
 			root.present(detail)
@@ -54,7 +53,7 @@ final class DismissPublisherTests: XCTestCase {
 			XCTAssertNil(root.presentedViewController)
 
 			dismissCancellables[detail.objectID] = detail
-				.selfDismissPublisher
+				.publishers._testableDismissed
 				.sink { expectation.fulfill() }
 
 			root.present(detail)
@@ -64,39 +63,10 @@ final class DismissPublisherTests: XCTestCase {
 			XCTAssertNil(root.presentedViewController)
 		}
 
-		withoutNavigationAnimation { // nested dismiss
-			XCTAssertNil(root.presentedViewController)
-
-			dismissCancellables[root.objectID] = root
-				.dismissPublisher
-				.sink {
-					XCTAssertEqual($0, [detail1, detail2])
-					expectation3.fulfill()
-				}
-
-			dismissCancellables[detail1.objectID] = detail1
-				.selfDismissPublisher
-				.sink { expectation1.fulfill() }
-
-			dismissCancellables[detail2.objectID] = detail2
-				.selfDismissPublisher
-				.sink { expectation2.fulfill() }
-
-			root.present(detail1)
-			XCTAssertEqual(root.presentedViewController, detail1)
-
-			detail1.present(detail2)
-			XCTAssertEqual(detail1.presentedViewController, detail2)
-
-			root.dismiss()
-			XCTAssertNil(root.presentedViewController)
-		}
-
 		wait(
 			for: [
 				expectation1,
-				expectation2,
-				expectation3
+				expectation2
 			],
 			timeout: 1
 		)

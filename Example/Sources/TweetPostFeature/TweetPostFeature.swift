@@ -108,6 +108,8 @@ public func injectTweetPost<State, Action: CasePathable>(
 			return .none
 		}
 		Pullback(toPresentationAction.appending(path: \.presented.event.didPostTweet.success)) { state, _ in
+			guard state[keyPath: toPresentationState].wrappedValue.isNotNil
+			else { return .none }
 			return .send(toPresentationAction(.dismiss))
 		}
 	}

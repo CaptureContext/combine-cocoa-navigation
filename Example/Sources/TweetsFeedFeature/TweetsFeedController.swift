@@ -1,4 +1,5 @@
 import _ComposableArchitecture
+import SwiftUI
 import CocoaExtensions
 import CombineExtensions
 import CombineNavigation
@@ -7,23 +8,14 @@ import TweetDetailFeature
 import TweetReplyFeature
 
 @RoutingController
-public final class TweetsFeedController: ComposableViewControllerOf<TweetsFeedFeature> {
-	let host = ComposableHostingController<TweetsListView>()
-
-	@ComposableViewPresentationDestination<TweetReplyView>
-	var tweetReplyController
+public final class TweetsFeedController: ComposableHostingController<TweetsFeedView> {
+	@ComposablePresentationDestination(container: .navigation.container { $0
+		.modalPresentationStyle(.fullScreen)
+	})
+	var tweetReplyController: ComposableHostingController<TweetReplyView>?
 
 	@ComposableTreeDestination
 	var detailController: TweetDetailController?
-
-	public override func viewDidLoad() {
-		super.viewDidLoad()
-		self.addChild(host)
-		self.view.addSubview(host.view)
-		host.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-		host.view.frame = view.bounds
-		host.didMove(toParent: self)
-	}
 
 	public override func viewDidAppear(_ animated: Bool) {
 		super.viewDidAppear(animated)
@@ -31,19 +23,16 @@ public final class TweetsFeedController: ComposableViewControllerOf<TweetsFeedFe
 	}
 
 	public override func scope(_ store: Store?) {
-		host.setStore(store?.scope(
-			state: \.list,
-			action: \.list
-		))
+		super.scope(store)
 
 		_tweetReplyController.setStore(store?.scope(
-			state: \.tweetReply,
-			action: \.tweetReply.presented
+			state: \.presentationDestination?.tweetReply,
+			action: \.presentationDestination.tweetReply
 		))
 
 		_detailController.setStore(store?.scope(
-			state: \.detail,
-			action: \.detail.presented
+			state: \.navigationDestination?.detail,
+			action: \.navigationDestination.detail
 		))
 	}
 
@@ -51,20 +40,34 @@ public final class TweetsFeedController: ComposableViewControllerOf<TweetsFeedFe
 		_ publisher: StorePublisher,
 		into cancellables: inout Set<AnyCancellable>
 	) {
-		#warning("Add presentation to CombineNavigation")
-		
 		presentationDestination(
-			isPresented: \.$tweetReply.wrappedValue.isNotNil,
+			isPresented: \.$presentationDestination[case: \.tweetReply].isNotNil,
 			destination: $tweetReplyController,
-			dismissAction: .tweetReply(.dismiss)
+			dismissAction: .presentationDestination(.dismiss)
 		)
 		.store(in: &cancellables)
 
 		navigationDestination(
-			isPresented: \.$detail.wrappedValue.isNotNil,
+			isPresented: \.navigationDestination[case: \.detail].isNotNil,
 			destination: $detailController,
-			popAction: .detail(.dismiss)
+			popAction: .navigationDestination(.dismiss)
 		)
 		.store(in: &cancellables)
+	}
+}
+
+
+public struct TweetsFeedView: ComposableView {
+	private let store: StoreOf<TweetsFeedFeature>
+
+	public init(_ store: StoreOf<TweetsFeedFeature>) {
+		self.store = store
+	}
+
+	public var body: some View {
+		TweetsListView(store.scope(
+			state: \.list, 
+			action: \.list
+		))
 	}
 }

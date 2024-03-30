@@ -15,7 +15,7 @@ func prefillDatabaseIfNeeded(autoSignIn: Bool) async throws {
 			id: USID(),
 			username: defaultUsername,
 			password: .sha256(defaultPassword)!,
-			displayName: "Capture Context",
+			displayName: "CaptureContext",
 			bio: "We do cool stuff 😎🤘"
 		)
 		

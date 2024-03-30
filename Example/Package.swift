@@ -8,22 +8,24 @@ let package = Package(
 		.iOS(.v17)
 	],
 	dependencies: [
-		.package(
-			url: "https://github.com/capturecontext/composable-architecture-extensions.git",
-			branch: "observation-beta"
-		),
-		.package(
-			url: "https://github.com/capturecontext/combine-extensions.git",
-			.upToNextMinor(from: "0.1.0")
-		),
+//		.package(
+//			url: "https://github.com/capturecontext/composable-architecture-extensions.git",
+//			branch: "observation-beta"
+//		),
+		.package(path: "../../composable-architecture-extensions"),
+//		.package(
+//			url: "https://github.com/capturecontext/combine-extensions.git",
+//			.upToNextMinor(from: "0.1.0")
+//		),
 		.package(
 			url: "https://github.com/pointfreeco/swift-dependencies.git",
 			.upToNextMajor(from: "1.0.0")
 		),
-		.package(
-			url: "https://github.com/capturecontext/swift-foundation-extensions.git",
-			.upToNextMinor(from: "0.4.0")
-		),
+		.package(path: "../../swift-cocoa-extensions"),
+//		.package(
+//			url: "https://github.com/capturecontext/swift-cocoa-extensions.git",
+//			.upToNextMinor(from: "0.4.0")
+//		),
 		.package(
 			url: "https://github.com/pointfreeco/swift-identified-collections.git",
 			.upToNextMajor(from: "1.0.0")
@@ -46,8 +48,8 @@ let package = Package(
 					package: "combine-extensions"
 				),
 				.product(
-					name: "FoundationExtensions",
-					package: "swift-foundation-extensions"
+					name: "CocoaExtensions",
+					package: "swift-cocoa-extensions"
 				),
 				.product(
 					name: "IdentifiedCollections",
@@ -144,6 +146,7 @@ let package = Package(
 			product: .library(.static),
 			dependencies: [
 				.dependency("_ComposableArchitecture"),
+				.target("APIClient"),
 				.localExtensions,
 			]
 		),
@@ -153,7 +156,7 @@ let package = Package(
 			product: .library(.static),
 			dependencies: [
 				.target("AppModels"),
-				.target("TweetsListFeature"),
+				.target("TweetsFeedFeature"),
 				.target("UserSettingsFeature"),
 				.dependency("_ComposableArchitecture"),
 				.localExtensions,
@@ -174,7 +177,7 @@ let package = Package(
 			product: .library(.static),
 			dependencies: [
 				.target("AppModels"),
-				.target("TweetsListFeature"),
+				.target("TweetsFeedFeature"),
 				.dependency("_ComposableArchitecture"),
 				.localExtensions,
 			]
@@ -220,16 +223,6 @@ let package = Package(
 			dependencies: [
 				.target("TweetsFeedFeature"),
 				.target("UserProfileFeature"),
-				.dependency("_ComposableArchitecture"),
-				.localExtensions,
-			]
-		),
-
-		.target(
-			name: "ProfileFeedFeature",
-			product: .library(.static),
-			dependencies: [
-				.target("TweetFeature"),
 				.dependency("_ComposableArchitecture"),
 				.localExtensions,
 			]

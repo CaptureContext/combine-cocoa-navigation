@@ -1,5 +1,6 @@
 import _ComposableArchitecture
 import LocalExtensions
+import AppModels
 
 @Reducer
 public struct UserSettingsFeature {
@@ -16,10 +17,18 @@ public struct UserSettingsFeature {
 		}
 	}
 
+	@Dependency(\.currentUser)
+	var currentUser
+
 	@CasePathable
-	public enum Action: Equatable {}
+	public enum Action: Equatable {
+		case logout
+	}
 
 	public var body: some ReducerOf<Self> {
-		EmptyReducer()
+		Pullback(\.logout) { state in
+			currentUser.id = nil
+			return .none
+		}
 	}
 }

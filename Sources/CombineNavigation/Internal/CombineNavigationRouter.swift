@@ -2,11 +2,14 @@
 import Capture
 import CocoaAliases
 import Combine
-import FoundationExtensions
+import FoundationExtensionsMacros
+import CombineCocoa
+import ConcurrencyExtras
+import CombineInterceptionMacros
 
 extension CocoaViewController {
-	@usableFromInline
-	internal var combineNavigationRouter: CombineNavigationRouter {
+	@_spi(Internals)
+	public var combineNavigationRouter: CombineNavigationRouter {
 		getAssociatedObject(forKey: #function) ?? {
 			let router = CombineNavigationRouter(self)
 			setAssociatedObject(router, forKey: #function)
@@ -14,25 +17,27 @@ extension CocoaViewController {
 		}()
 	}
 
-	@inlinable
-	public func addRoutedChild(_ controller: CocoaViewController) {
+	public func registerRoutedChild(_ controller: CocoaViewController) {
 		combineNavigationRouter.addChild(controller.combineNavigationRouter)
-		addChild(controller)
+	}
+
+	public func unregisterRoutedChild(_ controller: CocoaViewController) {
+		combineNavigationRouter.removeChild(controller.combineNavigationRouter)
 	}
 }
 
 extension CombineNavigationRouter {
-	@usableFromInline
-	class NavigationRoute: Identifiable {
-		@usableFromInline
-		let id: AnyHashable
+	@_spi(Internals)
+	public class NavigationRoute: Identifiable {
+		public let id: AnyHashable
 
-		let routingControllerID: ObjectIdentifier
-		private(set) var routedControllerID: ObjectIdentifier?
+		public let routingControllerID: ObjectIdentifier
+		private(set) public var routedControllerID: ObjectIdentifier?
+
 		private let controller: () -> CocoaViewController?
 		let invalidationHandler: (() -> Void)?
 
-		init(
+		public init(
 			id: AnyHashable,
 			routingControllerID: ObjectIdentifier,
 			controller: @escaping () -> CocoaViewController?,
@@ -44,39 +49,130 @@ extension CombineNavigationRouter {
 			self.invalidationHandler = invalidationHandler
 		}
 
-		func makeController(
+		public func makeController(
 			routedBy parentRouter: CombineNavigationRouter
 		) -> CocoaViewController? {
 			let controller = self.controller()
-			controller?.combineNavigationRouter.parent = parentRouter
+			controller.map { parentRouter.addChild($0.combineNavigationRouter) }
 			routedControllerID = controller?.objectID
 			return controller
 		}
 	}
 }
 
-@usableFromInline
-final class CombineNavigationRouter: Weakifiable {
-	fileprivate weak var parent: CombineNavigationRouter?
-	fileprivate weak var node: CocoaViewController!
+extension CombineNavigationRouter {
+	@inlinable
+	public func addChild(_ router: CombineNavigationRouter) {
+		self.removeChild(router)
+		router.parent = self
+		children.append(.init(router))
+	}
 
-	fileprivate var directChildren: [Weak<CombineNavigationRouter>] = [] {
-		didSet { directChildren.removeAll(where: \.object.isNil) }
+	@inlinable
+	@discardableResult
+	public func removeChild(_ router: CombineNavigationRouter) -> Bool {
+		var isRemoved: Bool = false
+		children.removeAll {
+			let remove = $0.object === router
+			isRemoved = isRemoved || remove
+			return remove
+		}
+		if isRemoved { router.parent = nil }
+		return isRemoved
+	}
+
+	@inlinable
+	public func removeFromParent() {
+		guard let parent else { return }
+		parent.removeChild(self)
+	}
+}
+
+@_spi(Internals)
+public final class CombineNavigationRouter: Weakifiable {
+	public func resetPresentation() {
+		present(nil, onDismiss: {})
+	}
+
+	public func resetNavigationRoutes() {
+		let allRoutes = collectManagedRoutes()
+		guard allRoutes.isNotEmpty else { return }
+
+		withNavigationTransaction {
+			self.setRoutes([], onPop: nil)
+			children.forEach {
+				$0.object?.beginNavigationTransaction()
+				$0.object?.resetNavigationRoutes()
+			}
+		}
+
+		node?.navigationController.map(syncNavigationStack)
+
+		children.forEach { $0.object?.endNavigationTransaction() }
+	}
+
+	struct NavigationTransaction {
+		var count: Int = 0
+	}
+
+	private var navigationTransaction: NavigationTransaction?
+
+	func beginNavigationTransaction() {
+		if navigationTransaction.isNil {
+			self.navigationTransaction = .init()
+		} else {
+			self.navigationTransaction?.count += 1
+		}
+	}
+
+	func endNavigationTransaction() {
+		if navigationTransaction?.count == 0 {
+			self.navigationTransaction = nil
+		} else {
+			self.navigationTransaction?.count -= 1
+		}
+	}
+
+	func withNavigationTransaction(perform operation: () -> Void) {
+		beginNavigationTransaction()
+		operation()
+		endNavigationTransaction()
+	}
+
+	public weak var parent: CombineNavigationRouter?
+
+	public weak var node: CocoaViewController!
+
+	public var children: [Weak<CombineNavigationRouter>] = [] {
+		didSet { children.removeAll(where: \.object.isNil) }
 	}
 
 	fileprivate var isDirectChild: Bool {
-		true == parent?.directChildren
+		guard
+			let parent,
+			let parentNode = parent.node
+		else { return false }
+		return parent.children
 			.compactMap(\.object?.objectID)
 			.contains(objectID)
+		&& node.view.isNestedSubview(of: parentNode.view)
 	}
 
 	fileprivate func navigationGroupRoot() -> CombineNavigationRouter {
-		return isDirectChild
-		? parent!.navigationGroupRoot()
-		: self
+		if isDirectChild { return parent?.navigationGroupRoot() ?? self }
+		else { return self }
 	}
 
-	fileprivate var navigationControllerCancellable: AnyCancellable?
+	fileprivate var navigationControllerCancellable: Cancellable?
+	fileprivate var navigationControllerPublisher: some Publisher<UINavigationController, Never> {
+		navigationControllerSubject.compactMap(\.object)
+	}
+	fileprivate var navigationControllerSubject = CurrentValueSubject<
+		Weak<UINavigationController>,
+		Never
+	>(.init())
+
+	fileprivate var navigationStackSyncCancellable: AnyCancellable?
 	fileprivate var windowCancellable: AnyCancellable?
 
 	fileprivate var destinationDismissCancellable: AnyCancellable?
@@ -88,35 +184,37 @@ final class CombineNavigationRouter: Weakifiable {
 
 	fileprivate init(_ node: CocoaViewController?) {
 		self.node = node
+		self.subscribeToNavigationController()
 	}
 
-	@usableFromInline
-	internal func addChild(_ router: CombineNavigationRouter) {
-		router.parent = self
-		directChildren.removeAll(where: { $0.object === router })
-		directChildren.append(.init(router))
-	}
-
-	func setRoutes(
+	public func setRoutes(
 		_ routes: [NavigationRoute],
 		onPop: (([NavigationRoute]) -> Void)?
 	) {
 		self.routes = routes
-		self.popHandler = onPop
+		self.popHandler = { [weak self] routes in
+			if self?.navigationTransaction == nil {
+				onPop?(routes)
+			}
+		}
 		self.requestNavigationStackSync()
 	}
 
-	func present(
+	public func present(
 		_ presentationDestination: _PresentationDestinationProtocol?,
 		onDismiss: @escaping () -> Void
 	) {
 		self.requestSetPresentationDestination(
 			presentationDestination,
-			onDismiss: onDismiss
+			onDismiss: { [weak self] in
+				if self?.navigationTransaction == nil {
+					onDismiss()
+			 }
+		 }
 		)
 	}
 
-	func makeNavigationRoute<ID: Hashable>(
+	public func makeNavigationRoute<ID: Hashable>(
 		for id: ID,
 		controller: @escaping () -> CocoaViewController?,
 		invalidationHandler: (() -> Void)? = nil
@@ -139,22 +237,15 @@ extension CombineNavigationRouter {
 	) {
 		guard let node else { return }
 
-		if node.view.window != nil {
-			_setPresentationDestination(
-				destination,
-				onDismiss: onDismiss
-			)
-		} else {
-			node.view.publisher(for: \.window)
-				.filter(\.isNotNil)
-				.sink(receiveValue: capture { _self, _ in
-					_self._setPresentationDestination(
-						destination,
-						onDismiss: onDismiss
-					)
-				})
-				.store(in: &windowCancellable)
-		}
+		node.view.publishers.isReadyForPresenting
+			.compactMap { $0 ? () : nil }
+			.sink(receiveValue: capture { _self in
+				_self._setPresentationDestination(
+					destination,
+					onDismiss: onDismiss
+				)
+			})
+			.store(in: &windowCancellable)
 	}
 
 	private func _setPresentationDestination(
@@ -170,20 +261,12 @@ extension CombineNavigationRouter {
 
 		router.destinationDismissCancellable = nil
 
-		let __presentNewDestinationIfNeeded: () -> Void = {
+		let __presentNewDestinationIfNeeded: () -> Void = { [weak self] in
 			oldDestination?._invalidate()
+			router.presentedDestination = newDestination
 
-			if let destination = newDestination {
-				let controller = destination._initControllerForPresentationIfNeeded()
-
-				controller.selfDismissPublisher
-					.sink(receiveValue: onDismiss)
-					.store(in: &router.destinationDismissCancellable)
-
-				router.node.present(controller)
-			}
-
-			self.presentedDestination = newDestination
+			guard self?.navigationTransaction == nil else { return }
+			self?.presentCurrentDestination(onDismiss: onDismiss)
 		}
 
 		if router.node.presentedViewController != nil {
@@ -191,29 +274,39 @@ extension CombineNavigationRouter {
 			// to avoid dismiss action called on
 			// state changes
 			router.destinationDismissCancellable = nil
+			router.presentedDestination = nil
 			router.node.dismiss(completion: __presentNewDestinationIfNeeded)
 		} else {
 			__presentNewDestinationIfNeeded()
 		}
 	}
 
-	fileprivate func requestNavigationStackSync() {
-		guard let node else { return }
+	private func presentCurrentDestination(onDismiss: @escaping () -> Void) {
+		let router = self.navigationGroupRoot()
+		guard let destination = router.presentedDestination else { return }
 
-		if let navigation = node.navigationController {
-			syncNavigationStack(using: navigation)
-		} else {
-			node.publisher(for: \.navigationController)
-				.compactMap { $0 }
-				.sink(receiveValue: capture { $0.syncNavigationStack(using: $1) })
-				.store(in: &navigationControllerCancellable)
-		}
+		let controller = destination._initControllerForPresentationIfNeeded()
+
+		controller.publishers._testableDismissed
+			.sink(receiveValue: onDismiss)
+			.store(in: &router.destinationDismissCancellable)
+
+		router.node.present(controller)
 	}
 
-	private func syncNavigationStack(using navigation: UINavigationController) {
-		navigationControllerCancellable = nil
+	private func subscribeToNavigationController() {
+		navigationControllerCancellable = node?
+			.publisher(for: \.navigationController)
+			.map(capture { _self, navigation in
+				navigation.map(_self.subscribeToPop(from:))
+				return navigation
+			})
+			.map(Weak.init(_:))
+			.resend(to: navigationControllerSubject)
+	}
 
-		navigation.popPublisher
+	private func subscribeToPop(from navigation: UINavigationController) {
+		navigation.publishers.didPopControllers
 			.sink(receiveValue: capture { _self, controllers in
 				let routes = _self.routes.reduce(into: (
 					kept: [NavigationRoute](),
@@ -229,17 +322,30 @@ extension CombineNavigationRouter {
 				_self.popHandler?(routes.popped)
 			})
 			.store(in: &destinationPopCancellable)
+	}
 
-		navigation.setViewControllers(
-			buildNavigationStack()
-		)
+	public func requestNavigationStackSync() {
+		navigationControllerPublisher
+			.sinkValues(capture { $0.syncNavigationStack(using: $1) })
+			.store(in: &navigationStackSyncCancellable)
+	}
+
+	private func syncNavigationStack(
+		using navigation: UINavigationController
+	) {
+		navigationStackSyncCancellable = nil
+
+		if navigationTransaction == nil {
+			let controllers = buildNavigationStack()
+			navigation.setViewControllers(controllers)
+		}
 	}
 }
 
 // MARK: Build navigation stack
 
 extension CombineNavigationRouter {
-	fileprivate func buildNavigationStack() -> [CocoaViewController] {
+	public func buildNavigationStack() -> [CocoaViewController] {
 		parent
 			.map { $0.buildNavigationStack() }
 			.or(
@@ -248,17 +354,80 @@ extension CombineNavigationRouter {
 			)
 	}
 
-	private func buildManagedNavigationStack() -> [CocoaViewController] {
+	public func buildManagedNavigationStack() -> [CocoaViewController] {
 		prepareRoutedControllers().flatMap { controller in
 			[controller] + controller.combineNavigationRouter.buildManagedNavigationStack()
 		}
 	}
 
-	private func prepareRoutedControllers() -> [CocoaViewController] {
-		directChildren.compactMap(\.object).flatMap { $0.prepareRoutedControllers() }
-		+ routes.compactMap { $0.makeController(routedBy: self) }
+	public func prepareRoutedControllers() -> [CocoaViewController] {
+		return processManagedRoutes { $1.makeController(routedBy: $0) }
+	}
+
+	public func collectManagedRoutes() -> [NavigationRoute] {
+		return processManagedRoutes { _, route in route }
+	}
+
+	private func processManagedRoutes<Object>(_ f: (CombineNavigationRouter, NavigationRoute) -> Object?) -> [Object] {
+		return children.compactMap(\.object).filter(\.isDirectChild).flatMap { $0.processManagedRoutes(f) }
+		+ routes.compactMap { f(self, $0) } // indirect children are equal to routes
+	}
+
+	public func printRoutersGraph(childIndex: Int? = nil, _ nesting: Int = 0, to target: inout some TextOutputStream) {
+		var indent = String(repeating: "  ", count: nesting) + "-"
+
+		if let childIndex { indent += " \(childIndex):" }
+
+		print(indent, String(describing: type(of: node!)), node.objectID, isDirectChild, to: &target)
+		children.enumerated().forEach { index, child in
+			child.object?.printRoutersGraph(childIndex: index, nesting + 1, to: &target)
+		}
 	}
 }
 
-// MARK: Helpers
+extension CocoaView {
+	func isNestedSubview(of parent: CocoaView) -> Bool {
+		superview === parent || superview?.isNestedSubview(of: parent) == true
+	}
+}
+
+extension UIResponder {
+	var __window: UIWindow? {
+		guard let window = self as? UIWindow 
+		else { return next?.__window }
+		return window
+	}
+}
+
+extension PublishersProxy where Base: CocoaViewController {
+	var _testableDismissed: some Publisher<Void, Never> {
+		#if canImport(XCTest)
+		if let controller = base.as(AppleSpaghettiCodeTestableController.self) {
+			return controller.publisher(
+				for: #selector(AppleSpaghettiCodeTestableController.wasDismissed)
+			).eraseToAnyPublisher()
+		} else {
+			return dismissed.eraseToAnyPublisher()
+		}
+		#else
+		return dismissed
+		#endif
+	}
+}
+
+extension PublishersProxy where Base: CocoaView {
+	var isReadyForPresenting: some Publisher<Bool, Never> {
+		#if canImport(XCTest)
+		return Just(true)
+		#else
+		return Publishers.Merge(
+			Just(base.window.isNotNil),
+			base.publisher(for: #methodSelector(UIView.didMoveToWindow))
+				.replaceOutput(with: ())
+				.compactMap { [weak base] in base?.window.isNotNil }
+		)
+		#endif
+	}
+}
+
 #endif

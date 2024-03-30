@@ -2,7 +2,7 @@ import LocalExtensions
 import AppModels
 
 extension APIClient {
-	public struct User {
+	public struct User: ClientOperationsGroup {
 		public init(
 			fetch: Operations.Fetch,
 			follow: Operations.Follow,
@@ -27,12 +27,9 @@ extension APIClient.User {
 }
 
 extension APIClient.User.Operations {
-	public struct Fetch {
+	public struct Fetch: ClientOperation {
 		public typealias Input = USID
-
 		public typealias Output = Result<UserInfoModel, APIClient.Error>
-
-		public typealias AsyncSignature = @Sendable (Input) async -> Output
 
 		public var asyncCall: AsyncSignature
 
@@ -47,15 +44,13 @@ extension APIClient.User.Operations {
 		}
 	}
 
-	public struct Follow {
+	public struct Follow: ClientOperation {
 		public typealias Input = (
 			id: USID,
 			value: Bool
 		)
 
 		public typealias Output = Result<Void, APIClient.Error>
-
-		public typealias AsyncSignature = @Sendable (Input) async -> Output
 
 		public var asyncCall: AsyncSignature
 
@@ -71,12 +66,9 @@ extension APIClient.User.Operations {
 		}
 	}
 
-	public struct Report {
+	public struct Report: ClientOperation {
 		public typealias Input = USID
-
 		public typealias Output = Result<Void, APIClient.Error>
-
-		public typealias AsyncSignature = @Sendable (Input) async -> Output
 
 		public var asyncCall: AsyncSignature
 
@@ -91,7 +83,7 @@ extension APIClient.User.Operations {
 		}
 	}
 
-	public struct FetchTweets {
+	public struct FetchTweets: ClientOperation {
 		public typealias Input = (
 			id: USID,
 			page: Int,
@@ -99,8 +91,6 @@ extension APIClient.User.Operations {
 		)
 
 		public typealias Output = Result<[TweetModel], APIClient.Error>
-
-		public typealias AsyncSignature = @Sendable (Input) async -> Output
 
 		public var asyncCall: AsyncSignature
 

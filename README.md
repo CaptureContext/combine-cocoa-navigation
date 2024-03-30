@@ -1,6 +1,6 @@
 # combine-cocoa-navigation
 
-[![SwiftPM 5.9](https://img.shields.io/badge/swiftpm-5.9-ED523F.svg?style=flat)](https://github.com/CaptureContext/swift-declarative-configuration/actions/workflows/Test.yml) ![Platforms](https://img.shields.io/badge/platforms-iOS_13_|_macOS_11_|_tvOS_13_|_watchOS_6_|_Catalyst_13-ED523F.svg?style=flat) [![@capture_context](https://img.shields.io/badge/contact-@capture__context-1DA1F2.svg?style=flat&logo=twitter)](https://twitter.com/capture_context) 
+[![CI](https://github.com/CaptureContext/combine-cocoa-navigation/actions/workflows/ci.yml/badge.svg)](https://github.com/CaptureContext/combine-cocoa-navigation/actions/workflows/ci.yml) [![SwiftPM 5.9](https://img.shields.io/badge/swiftpm-5.9-ED523F.svg?style=flat)](https://github.com/CaptureContext/swift-declarative-configuration/actions/workflows/Test.yml) ![Platforms](https://img.shields.io/badge/platforms-iOS_13_|_macOS_11_|_tvOS_13_|_watchOS_6_|_Catalyst_13-ED523F.svg?style=flat) [![@capture_context](https://img.shields.io/badge/contact-@capture__context-1DA1F2.svg?style=flat&logo=twitter)](https://twitter.com/capture_context) 
 
 >Package compiles for all platforms, but functionality is available if UIKit can be imported and the platform is not watchOS.
 
@@ -193,6 +193,59 @@ final class MyViewController: UIViewController {
   }
 }
 ```
+
+### SwiftUI
+
+To connect routing in SwiftUI you should use `CombineNavigationHostingController` type instead of the default one. And inject your CocoaViewControllers with `WithCocoaNavigation` helper.
+
+```swift
+let hostingController = CombineNavigationHostingController<MyProfileView>()
+hostingController.contentView = MyProfileView()
+
+struct MyProfileView: View {
+  //...
+  
+  var body: some View {
+    HeaderView()
+    WithCocoaNavigation {
+      FeedViewController(store: store.scope(
+      	state: \.feed,
+        action: \.feed
+      ))
+    }
+  }
+}
+```
+
+Or use `CocoaComponent` if you need custom representable and it's `.withCocoaNavigation()` method.
+
+```swift
+let hostingController = CombineNavigationHostingController<MyProfileView>()
+hostingController.contentView = MyProfileView()
+
+struct MyProfileView: View {
+  // ...
+  
+  var body: some View {
+    HeaderView()
+    CocoaComponent(
+    	FeedViewController(store: store.scope(
+      	state: \.feed,
+        action: \.feed
+      )),
+      update: { controller, context in
+        // ...
+      },
+      coordinator: { 
+      	// ...
+      }
+    )
+    .withCocoaNavigation()
+  }
+}
+```
+
+
 
 ## Installation
 

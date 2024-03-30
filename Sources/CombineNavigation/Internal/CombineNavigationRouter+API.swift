@@ -2,14 +2,13 @@
 import Capture
 import CocoaAliases
 import Combine
-import FoundationExtensions
+import FoundationExtensionsMacros
 
 // MARK: - navigationStack
 
 extension CombineNavigationRouter {
 	/// Subscribes on publisher of navigation stack state
-	@usableFromInline
-	func navigationStack<
+	public func navigationStack<
 		P: Publisher,
 		C: Collection,
 		Route
@@ -34,8 +33,7 @@ extension CombineNavigationRouter {
 	}
 
 	/// Subscribes on publisher of navigation stack state
-	@usableFromInline
-	func navigationStack<
+	public func navigationStack<
 		P: Publisher,
 		C: Collection & Equatable,
 		Route
@@ -61,8 +59,7 @@ extension CombineNavigationRouter {
 		)
 	}
 	/// Subscribes on publisher of navigation stack state
-	@usableFromInline
-	func navigationStack<
+	public func navigationStack<
 		P: Publisher,
 		Stack,
 		IDs: Collection & Equatable,
@@ -97,8 +94,7 @@ extension CombineNavigationRouter {
 	}
 
 	/// Subscribes on publisher of navigation stack state
-	@usableFromInline
-	func navigationStack<
+	public func navigationStack<
 		P: Publisher,
 		Stack,
 		IDs: Collection & Equatable,
@@ -128,8 +124,7 @@ extension CombineNavigationRouter {
 	}
 
 	/// Subscribes on publisher of navigation stack state
-	@usableFromInline
-	func _navigationStack<
+	public func _navigationStack<
 		P: Publisher,
 		Stack,
 		DestinationID
@@ -150,11 +145,15 @@ extension CombineNavigationRouter {
 					onPop: managedRoutes.isNotEmpty
 					? { poppedRoutes in
 						let routes = poppedRoutes.compactMap { (route) -> DestinationID? in
-							guard managedRoutes.contains(where: { $0 === route }) else { return nil }
-							return route.id as? DestinationID
+							guard 
+								managedRoutes.contains(where: { $0 === route }),
+								let id = route.id as? DestinationID
+							else { return nil }
+
+							route.invalidationHandler?()
+							return id
 						}
 
-						poppedRoutes.forEach { $0.invalidationHandler?() }
 						onPop(routes)
 					}
 					: nil
@@ -167,8 +166,7 @@ extension CombineNavigationRouter {
 
 extension CombineNavigationRouter {
 	/// Subscribes on publisher of navigation destination state
-	@usableFromInline
-	func navigationDestination<P: Publisher>(
+	public func navigationDestination<P: Publisher>(
 		_ id: AnyHashable,
 		isPresented publisher: P,
 		destination: _TreeDestinationProtocol,
@@ -185,17 +183,17 @@ extension CombineNavigationRouter {
 	}
 
 	/// Subscribes on publisher of navigation destination state
-	@usableFromInline
-	func navigationDestination<P: Publisher, Route>(
+	public func navigationDestination<P: Publisher, Route>(
 		_ publisher: P,
+		removeDuplicates isDuplicate: @escaping (P.Output, P.Output) -> Bool = Optional.__compareEnumTagsEqual,
 		switch destination: @escaping (Route) -> _TreeDestinationProtocol,
 		onPop: @escaping () -> Void
 	) -> AnyCancellable where
 		P.Output == Optional<Route>,
 		P.Failure == Never
 	{
-		publisher
-			.removeDuplicates(by: Optional.compareTagsEqual)
+		let cancellable = publisher
+			.removeDuplicates(by: isDuplicate)
 			.map { [weak self] (route) -> NavigationRoute? in
 				guard let self, let route else { return nil }
 				let destination = destination(route)
@@ -217,6 +215,12 @@ extension CombineNavigationRouter {
 					}
 				)
 			})
+		return AnyCancellable { [weak self] in
+			cancellable.cancel()
+			
+			guard let self else { return }
+			self.resetNavigationRoutes()
+		}
 	}
 }
 
@@ -224,8 +228,7 @@ extension CombineNavigationRouter {
 
 extension CombineNavigationRouter {
 	/// Subscribes on publisher of navigation destination state
-	@usableFromInline
-	func presentationDestination<P: Publisher>(
+	public func presentationDestination<P: Publisher>(
 		_ id: AnyHashable,
 		isPresented publisher: P,
 		destination: _PresentationDestinationProtocol,
@@ -242,23 +245,28 @@ extension CombineNavigationRouter {
 	}
 
 	/// Subscribes on publisher of navigation destination state
-	@usableFromInline
-	func presentationDestination<P: Publisher, Route>(
+	public func presentationDestination<P: Publisher, Route>(
 		_ publisher: P,
+		removeDuplicates isDuplicate: @escaping (P.Output, P.Output) -> Bool = Optional.__compareEnumTagsEqual,
 		switch destination: @escaping (Route) -> _PresentationDestinationProtocol,
 		onDismiss: @escaping () -> Void
 	) -> AnyCancellable where
 		P.Output == Optional<Route>,
 		P.Failure == Never
 	{
-		publisher
-			.removeDuplicates(by: Optional.compareTagsEqual)
+		let cancellable = publisher
+			.removeDuplicates(by: isDuplicate)
 			.sink(receiveValue: capture { _self, route in
 				_self.present(
 					route.map(destination),
 					onDismiss: onDismiss
 				)
 			})
+
+		return AnyCancellable {
+			cancellable.cancel()
+			#warning("Reset presentation")
+		}
 	}
 }
 #endif

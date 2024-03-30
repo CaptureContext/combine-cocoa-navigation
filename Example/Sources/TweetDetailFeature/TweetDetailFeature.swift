@@ -10,54 +10,27 @@ import TweetReplyFeature
 public struct TweetDetailFeature {
 	public init() {}
 
-	@Reducer
-	public struct Destination {
-		@ObservableState
-		public enum State: Equatable {
-			case detail(TweetDetailFeature.State)
-			case tweetReply(TweetReplyFeature.State)
-		}
-
-		@CasePathable
-		public enum Action: Equatable {
-			case tweetReply(TweetReplyFeature.Action)
-		}
-
-		public var body: some ReducerOf<Self> {
-			Scope(
-				state: \.tweetReply,
-				action: \.tweetReply,
-				child: TweetReplyFeature.init
-			)
-		}
-	}
-
 	@ObservableState
 	public struct State: Equatable {
 		public var source: TweetFeature.State
 		public var replies: TweetsListFeature.State
 
 		@Presents
-		public var detail: TweetDetailFeature.State?
+		public var presentationDestination: PresentationDestination.State?
 
 		@Presents
-		public var tweetReply: TweetReplyFeature.State?
-
-		@Presents
-		public var alert: AlertState<Action.Alert>?
+		public var navigationDestination: NavigationDestination.State?
 
 		public init(
 			source: TweetFeature.State,
 			replies: TweetsListFeature.State = .init(),
-			detail: TweetDetailFeature.State? = nil,
-			tweetReply: TweetReplyFeature.State? = nil,
-			alert: AlertState<Action.Alert>? = nil
+			presentationDestination: PresentationDestination.State? = nil,
+			navigationDestination: NavigationDestination.State? = nil
 		) {
 			self.source = source
 			self.replies = replies
-			self.detail = detail
-			self.tweetReply = tweetReply
-			self.alert = alert
+			self.presentationDestination = presentationDestination
+			self.navigationDestination = navigationDestination
 		}
 	}
 
@@ -65,23 +38,15 @@ public struct TweetDetailFeature {
 	public enum Action: Equatable {
 		case source(TweetFeature.Action)
 		case replies(TweetsListFeature.Action)
-		case detail(PresentationAction<TweetDetailFeature.Action>)
-		case tweetReply(PresentationAction<TweetReplyFeature.Action>)
+		case presentationDestination(PresentationAction<PresentationDestination.Action>)
+		case navigationDestination(PresentationAction<NavigationDestination.Action>)
 		case fetchMoreReplies(reset: Bool = true)
-
-		case alert(Alert)
 		case delegate(Delegate)
 		case event(Event)
 
 		@CasePathable
 		public enum Delegate: Equatable {
 			case openProfile(USID)
-		}
-
-		@CasePathable
-		public enum Alert: Equatable {
-			case didTapAccept
-			case didTapRecoveryOption(String)
 		}
 
 		@CasePathable
@@ -109,110 +74,22 @@ public struct TweetDetailFeature {
 
 	public var body: some ReducerOf<Self> {
 		CombineReducers {
-			Reduce { state, action in
-				switch action {
-				case .source(.tapOnAuthor):
-					return .send(.delegate(.openProfile(
-						state.source.author.id
-					)))
-
-				case
-					let .replies(.delegate(.openProfile(id))),
-					let .detail(.presented(.delegate(.openProfile(id)))):
-					return .send(.delegate(.openProfile(id)))
-
-				default:
-					return .none
-				}
-			}
+			openProfileReducer
+			fetchTweetsReducer
+			syncTweetReplyReducer
+			alertReducer
 
 			Pullback(\.replies.delegate.openDetail) { state, id in
 				guard let tweet = state.replies.tweets[id: id]
 				else { return .none }
 
-				state.detail = .init(source: tweet)
+				state.navigationDestination = .detail(.init(source: tweet))
 				return .none
 			}
 
 			Pullback(\.event.didAppear) { state in
 				return .send(.fetchMoreReplies())
 			}
-
-			Reduce { state, action in
-				switch action {
-				case let .fetchMoreReplies(reset):
-					let id = state.source.id
-					let repliesCount = reset ? 0 : state.replies.tweets.count
-					return .run { send in
-						await send(.event(.didFetchReplies(
-							apiClient.tweet.fetchReplies(
-								for: id,
-								page: repliesCount / 10,
-								limit: 10
-							).map { tweets in
-								Action.Event.FetchedTweets(
-									tweets: tweets,
-									reset: reset
-								)
-							}
-						)))
-					}
-
-				case let .event(.didFetchReplies(replies)):
-					switch replies {
-					case let .success(replies):
-						let tweets = replies.tweets.map { $0.convert(to: .tweetFeature) }
-						if replies.reset {
-							state.replies.tweets = .init(uniqueElements: tweets)
-						} else {
-							state.replies.tweets.append(contentsOf: tweets)
-						}
-						if state.replies.tweets.count > state.source.repliesCount {
-							state.source.repliesCount = state.replies.tweets.count
-						}
-						state.replies.placeholder = .text()
-						return .none
-
-					case let .failure(error):
-						state.alert = makeAlert(for: error)
-						return .none
-					}
-
-				default:
-					return .none
-				}
-			}
-
-			Reduce { state, action in
-				switch action {
-				case .alert(.didTapAccept):
-					state.alert = nil
-					return .none
-
-				case let .alert(.didTapRecoveryOption(deeplink)):
-					#warning("TODO: Handle deeplink")
-					return .none
-
-				default:
-					 return .none
-				}
-			}
-
-			injectTweetReply(
-				tweetState: \.source,
-				tweetAction: \.source,
-				state: \.$tweetReply,
-				action: \.tweetReply,
-				child: TweetReplyFeature.init
-			)
-
-			injectTweetReply(
-				tweetsState: \.replies.tweets,
-				tweetsAction: \.replies.tweets,
-				state: \.$tweetReply,
-				action: \.tweetReply,
-				child: TweetReplyFeature.init
-			)
 
 			Scope(
 				state: \State.source,
@@ -226,27 +103,133 @@ public struct TweetDetailFeature {
 				child: TweetsListFeature.init
 			)
 		}
-		.syncTweetDetailSource(
-			state: \.$detail,
-			with: \.source
-		)
-		.syncTweetDetailSource(
-			state: \.$detail,
-			with: \.replies
+		.ifLet(
+			\.$presentationDestination,
+			action: \.presentationDestination,
+			destination: PresentationDestination.init
 		)
 		.ifLet(
-			\State.$detail,
-			action: \.detail,
-			destination: TweetDetailFeature.init
-		)
-		.ifLet(
-			\.$tweetReply,
-			action: \.tweetReply,
-			destination: TweetReplyFeature.init
+			\.$navigationDestination,
+			action: \.navigationDestination,
+			destination: NavigationDestination.init
 		)
 	}
 
-	func makeAlert(for error: APIClient.Error) -> AlertState<Action.Alert> {
+	@usableFromInline
+	var openProfileReducer: some ReducerOf<Self> {
+		Reduce { state, action in
+			switch action {
+			case .source(.tapOnAuthor):
+				return .send(.delegate(.openProfile(
+					state.source.author.id
+				)))
+
+			case
+				let .replies(.delegate(.openProfile(id))),
+				let .navigationDestination(.presented(.detail(.delegate(.openProfile(id))))):
+				return .send(.delegate(.openProfile(id)))
+
+			default:
+				return .none
+			}
+		}
+	}
+
+	@usableFromInline
+	var syncTweetReplyReducer: some ReducerOf<Self> {
+		CombineReducers {
+			Pullback(\.source.reply) { state, id in
+				state.presentationDestination = .tweetReply(.init(source: state.source))
+				return .none
+			}
+
+			Pullback(\.replies.tweets, action: \.reply) { state, id in
+				state.replies.tweets[id: id].map { tweet in
+					state.presentationDestination = .tweetReply(.init(source: tweet))
+				}
+				return .none
+			}
+
+			Pullback(\.presentationDestination.tweetReply.close) { state, _ in
+				guard case .tweetReply = state.presentationDestination
+				else { return .none }
+				return .send(.presentationDestination(.dismiss))
+			}
+
+			Pullback(\.presentationDestination.tweetReply.event.didPostTweet.success) { state, _ in
+				guard case .tweetReply = state.presentationDestination
+				else { return .none }
+				return .send(.presentationDestination(.dismiss))
+			}
+		}
+	}
+
+	@usableFromInline
+	var fetchTweetsReducer: some ReducerOf<Self> {
+		Reduce { state, action in
+			switch action {
+			case let .fetchMoreReplies(reset):
+				let id = state.source.id
+				let repliesCount = reset ? 0 : state.replies.tweets.count
+				return .run { send in
+					await send(.event(.didFetchReplies(
+						apiClient.tweet.fetchReplies(
+							for: id,
+							page: repliesCount / 10,
+							limit: 10
+						).map { tweets in
+							Action.Event.FetchedTweets(
+								tweets: tweets,
+								reset: reset
+							)
+						}
+					)))
+				}
+
+			case let .event(.didFetchReplies(replies)):
+				switch replies {
+				case let .success(replies):
+					let tweets = replies.tweets.map { $0.convert(to: .tweetFeature) }
+					if replies.reset {
+						state.replies.tweets = .init(uniqueElements: tweets)
+					} else {
+						state.replies.tweets.append(contentsOf: tweets)
+					}
+					if state.replies.tweets.count > state.source.repliesCount {
+						state.source.repliesCount = state.replies.tweets.count
+					}
+					state.replies.placeholder = .text()
+					return .none
+
+				case let .failure(error):
+					state.presentationDestination = .alert(makeAlert(for: error))
+					return .none
+				}
+
+			default:
+				return .none
+			}
+		}
+	}
+
+	@usableFromInline
+	var alertReducer: some ReducerOf<Self> {
+		Reduce { state, action in
+			 switch action {
+			 case .presentationDestination(.presented(.alert(.didTapAccept))):
+				 return .send(.presentationDestination(.dismiss))
+
+			 case let .presentationDestination(.presented(.alert(.didTapRecoveryOption(deeplink)))):
+				 #warning("TODO: Handle deeplink")
+				 return .send(.presentationDestination(.dismiss))
+
+			 default:
+					return .none
+			 }
+		 }
+	}
+
+	func makeAlert(for error: APIClient.Error) -> AlertState<PresentationDestination.Action.Alert> {
 		.init(
 			title: {
 				TextState(error.message)
@@ -261,9 +244,9 @@ public struct TweetDetailFeature {
 }
 
 extension Reducer {
-	public func syncTweetDetailSource(
-		state toTweetDetail: @escaping (State) -> PresentationState<TweetDetailFeature.State>,
-		with toTweetsListState: WritableKeyPath<State, TweetsListFeature.State>
+	public func syncTweetList(
+		state toTweetsListState: WritableKeyPath<State, TweetsListFeature.State>,
+		with toTweetDetail: @escaping (State) -> PresentationState<TweetDetailFeature.State>
 	) -> some ReducerOf<Self> {
 		onChange(of: { toTweetDetail($0).wrappedValue?.source }) { state, old, new in
 			guard let tweet = new else { return .none }
@@ -272,14 +255,69 @@ extension Reducer {
 		}
 	}
 
-	public func syncTweetDetailSource(
-		state toTweetDetail: @escaping (State) -> PresentationState<TweetDetailFeature.State>,
-		with toTweetState: WritableKeyPath<State, TweetFeature.State>
+	public func syncTweet(
+		state toTweetState: WritableKeyPath<State, TweetFeature.State>,
+		with toTweetDetail: @escaping (State) -> PresentationState<TweetDetailFeature.State>
 	) -> some ReducerOf<Self> {
 		onChange(of: { toTweetDetail($0).wrappedValue?.source }) { state, old, new in
-			guard let tweet = new else { return .none }
+			guard
+				let tweet = new,
+				state[keyPath: toTweetState].id == tweet.id
+			else { return .none }
 			state[keyPath: toTweetState] = tweet
 			return .none
+		}
+	}
+}
+
+extension TweetDetailFeature {
+	@Reducer
+	public struct PresentationDestination {
+		@ObservableState
+		public enum State: Equatable {
+			case tweetReply(TweetReplyFeature.State)
+			case alert(AlertState<Action.Alert>)
+		}
+
+		@CasePathable
+		public enum Action: Equatable {
+			case tweetReply(TweetReplyFeature.Action)
+			case alert(Alert)
+
+			@CasePathable
+			public enum Alert: Equatable {
+				case didTapAccept
+				case didTapRecoveryOption(String)
+			}
+		}
+
+		public var body: some ReducerOf<Self> {
+			Scope(
+				state: \.tweetReply,
+				action: \.tweetReply,
+				child: TweetReplyFeature.init
+			)
+		}
+	}
+
+	@Reducer
+	public struct NavigationDestination {
+		@ObservableState
+		public enum State: Equatable {
+			case detail(TweetDetailFeature.State)
+		}
+
+		@CasePathable
+		public enum Action: Equatable {
+			case detail(TweetDetailFeature.Action)
+		}
+
+		public var body: some ReducerOf<Self> {
+			Scope(
+				state: \.detail,
+				action: \.detail,
+				child: TweetDetailFeature.init
+			)
 		}
 	}
 }

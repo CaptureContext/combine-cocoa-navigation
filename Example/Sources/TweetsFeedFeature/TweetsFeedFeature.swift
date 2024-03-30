@@ -12,27 +12,31 @@ public struct TweetsFeedFeature {
 
 	@ObservableState
 	public struct State: Equatable {
+		public var dataSource: DataSource?
+
 		public var list: TweetsListFeature.State
 
 		@Presents
-		public var detail: TweetDetailFeature.State?
+		public var presentationDestination: PresentationDestination.State?
 
 		@Presents
-		public var tweetReply: TweetReplyFeature.State?
-
-		@Presents
-		public var alert: AlertState<Action.Alert>?
+		public var navigationDestination: NavigationDestination.State?
 
 		public init(
+			dataSource: DataSource? = nil,
 			list: TweetsListFeature.State = .init(),
-			detail: TweetDetailFeature.State? = nil,
-			tweetReply: TweetReplyFeature.State? = nil,
-			alert: AlertState<Action.Alert>? = nil
+			presentationDestination: PresentationDestination.State? = nil,
+			navigationDestination: NavigationDestination.State? = nil
 		) {
+			self.dataSource = dataSource
 			self.list = list
-			self.detail = detail
-			self.tweetReply = tweetReply
-			self.alert = alert
+			self.presentationDestination = presentationDestination
+			self.navigationDestination = navigationDestination
+		}
+
+		public enum DataSource: Equatable {
+			case common
+			case user(USID)
 		}
 	}
 
@@ -40,17 +44,11 @@ public struct TweetsFeedFeature {
 	public enum Action: Equatable {
 		case list(TweetsListFeature.Action)
 		case detail(PresentationAction<TweetDetailFeature.Action>)
-		case tweetReply(PresentationAction<TweetReplyFeature.Action>)
 		case fetchMoreTweets(reset: Bool = false)
-		case alert(Alert)
+		case presentationDestination(PresentationAction<PresentationDestination.Action>)
+		case navigationDestination(PresentationAction<NavigationDestination.Action>)
 		case event(Event)
 		case delegate(Delegate)
-
-		@CasePathable
-		public enum Alert: Equatable {
-			case didTapAccept
-			case didTapRecoveryOption(String)
-		}
 
 		@CasePathable
 		public enum Event: Equatable {
@@ -80,20 +78,21 @@ public struct TweetsFeedFeature {
 	@Dependency(\.apiClient)
 	var apiClient
 
+	@inlinable
 	public var body: some ReducerOf<Self> {
 		CombineReducers {
 			Reduce { state, action in
 				switch action {
 				case
 					let .list(.delegate(.openProfile(id))),
-					let .detail(.presented(.delegate(.openProfile(id)))):
+					let .navigationDestination(.presented(.detail(.delegate(.openProfile(id))))):
 					return .send(.delegate(.openProfile(id)))
 
 				case let .list(.delegate(.openDetail(id))):
 					guard let tweet = state.list.tweets[id: id]
 					else { return .none }
 
-					state.detail = .init(source: tweet)
+					state.navigationDestination = .detail(.init(source: tweet))
 					return .none
 
 				default:
@@ -103,14 +102,60 @@ public struct TweetsFeedFeature {
 
 			Pullback(\.event.didAppear) { state in
 				return .run { send in
-					try await Task.sleep(nanoseconds: 1_000_000_000)
 					await send(.fetchMoreTweets())
 				}
 			}
 
-			Reduce { state, action in
-				switch action {
-				case let .fetchMoreTweets(reset):
+			fetchTweetsReducer
+			syncTweetReplyReducer
+			alertReducer
+
+			Scope(
+				state: \State.list,
+				action: \.list,
+				child: TweetsListFeature.init
+			)
+		}
+		.ifLet(
+			\.$presentationDestination,
+			action: \.presentationDestination,
+			destination: PresentationDestination.init
+		)
+		.ifLet(
+			\.$navigationDestination,
+			action: \.navigationDestination,
+			destination: NavigationDestination.init
+		)
+		.syncTweetList(
+			state: \.list,
+			with: \.$navigationDestination.detail
+		)
+	}
+
+	@usableFromInline
+	var fetchTweetsReducer: some ReducerOf<Self> {
+		Reduce { state, action in
+			switch action {
+			case let .fetchMoreTweets(reset):
+				switch state.dataSource {
+				case let .user(userID):
+					let tweetsCount = reset ? 0 : state.list.tweets.count
+					return .run { send in
+						await send(.event(.didFetchTweets(
+							apiClient.user.fetchTweets(
+								for: userID,
+								page: tweetsCount / 10,
+								limit: 10
+							).map { tweets in
+								Action.Event.FetchedTweets(
+									tweets: tweets,
+									reset: reset
+								)
+							}
+						)))
+					}
+
+				case .common:
 					let tweetsCount = reset ? 0 : state.list.tweets.count
 					return .run { send in
 						await send(.event(.didFetchTweets(
@@ -125,74 +170,76 @@ public struct TweetsFeedFeature {
 							}
 						)))
 					}
-				case let .event(.didFetchTweets(tweets)):
-					switch tweets {
-					case let .success(fetched):
-						let tweets = fetched.tweets.map { $0.convert(to: .tweetFeature) }
-						if fetched.reset {
-							state.list.tweets = .init(uniqueElements: tweets)
-						} else {
-							state.list.tweets.append(contentsOf: tweets)
-						}
-						state.list.placeholder = .text()
-						return .none
+				default:
+					if reset { state.list.tweets.removeAll() }
+					return .none
+				}
 
-					case let .failure(error):
-						state.alert = makeAlert(for: error)
-						return .none
+			case let .event(.didFetchTweets(tweets)):
+				switch tweets {
+				case let .success(fetched):
+					let tweets = fetched.tweets.map { $0.convert(to: .tweetFeature) }
+					if fetched.reset {
+						state.list.tweets = .init(uniqueElements: tweets)
+					} else {
+						state.list.tweets.append(contentsOf: tweets)
 					}
+					state.list.placeholder = .text()
+					return .none
 
-				default:
+				case let .failure(error):
+					state.presentationDestination = .alert(makeAlert(for: error))
 					return .none
 				}
+
+			default:
+				return .none
 			}
-
-			Reduce { state, action in
-				switch action {
-				case .alert(.didTapAccept):
-					state.alert = nil
-					return .none
-
-				case let .alert(.didTapRecoveryOption(deeplink)):
-					#warning("TODO: Handle deeplink")
-					return .none
-
-				default:
-					return .none
-				}
-			}
-
-			Scope(
-				state: \State.list,
-				action: \.list,
-				child: TweetsListFeature.init
-			)
-
-			injectTweetReply(
-				tweetsState: \.list.tweets,
-				tweetsAction: \.list.tweets,
-				state: \.$tweetReply,
-				action: \.tweetReply,
-				child: TweetReplyFeature.init
-			)
 		}
-		.ifLet(
-			\.$tweetReply,
-			action: \.tweetReply,
-			destination: TweetReplyFeature.init
-		)
-		.ifLet(
-			\State.$detail,
-			action: \.detail,
-			destination: TweetDetailFeature.init
-		)
-		.syncTweetDetailSource(
-			state: \.$detail,
-			with: \.list
-		)
 	}
 
-	func makeAlert(for error: APIClient.Error) -> AlertState<Action.Alert> {
+	@usableFromInline
+	var syncTweetReplyReducer: some ReducerOf<Self> {
+		CombineReducers {
+			Pullback(\.list.tweets, action: \.reply) { state, id in
+				state.list.tweets[id: id].map { tweet in
+					state.presentationDestination = .tweetReply(.init(source: tweet))
+				}
+				return .none
+			}
+
+			Pullback(\.presentationDestination.tweetReply.close) { state, _ in
+				guard case .tweetReply = state.presentationDestination
+				else { return .none }
+				return .send(.presentationDestination(.dismiss))
+			}
+
+			Pullback(\.presentationDestination.tweetReply.event.didPostTweet.success) { state, _ in
+				guard case .tweetReply = state.presentationDestination
+				else { return .none }
+				return .send(.presentationDestination(.dismiss))
+			}
+		}
+	}
+
+	@usableFromInline
+	var alertReducer: some ReducerOf<Self> {
+		Reduce { state, action in
+			 switch action {
+			 case .presentationDestination(.presented(.alert(.didTapAccept))):
+				 return .send(.presentationDestination(.dismiss))
+
+			 case let .presentationDestination(.presented(.alert(.didTapRecoveryOption(deeplink)))):
+				 #warning("TODO: Handle deeplink")
+				 return .send(.presentationDestination(.dismiss))
+
+			 default:
+				 return .none
+			 }
+		 }
+	}
+
+	func makeAlert(for error: APIClient.Error) -> AlertState<PresentationDestination.Action.AlertAction> {
 		.init(
 			title: {
 				TextState(error.message)
@@ -203,5 +250,61 @@ public struct TweetsFeedFeature {
 				}
 			}
 		)
+	}
+}
+
+extension TweetsFeedFeature {
+	@Reducer
+	public struct PresentationDestination {
+		public init() {}
+
+		@ObservableState
+		public enum State: Equatable {
+			case tweetReply(TweetReplyFeature.State)
+			case alert(AlertState<Action.AlertAction>)
+		}
+
+		@CasePathable
+		public enum Action: Equatable {
+			case alert(AlertAction)
+			case tweetReply(TweetReplyFeature.Action)
+
+			@CasePathable
+			public enum AlertAction: Equatable {
+				case didTapAccept
+				case didTapRecoveryOption(String)
+			}
+		}
+
+		public var body: some ReducerOf<Self> {
+			Scope(
+				state: \.tweetReply,
+				action: \.tweetReply,
+				child: TweetReplyFeature.init
+			)
+		}
+	}
+
+	@Reducer
+	public struct NavigationDestination {
+		public init() {}
+
+		@ObservableState
+		public enum State: Equatable {
+			case detail(TweetDetailFeature.State)
+		}
+
+		@CasePathable
+		public enum Action: Equatable {
+			case detail(TweetDetailFeature.Action)
+		}
+
+		public var body: some ReducerOf<Self> {
+			Scope(
+				state: \.detail,
+				action: \.detail,
+				child: TweetDetailFeature.init
+			)
+		}
 	}
 }

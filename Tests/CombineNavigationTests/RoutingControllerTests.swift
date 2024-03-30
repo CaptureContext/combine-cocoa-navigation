@@ -2,7 +2,8 @@ import XCTest
 import CocoaAliases
 import Capture
 import Combine
-@testable import CombineNavigation
+import CustomDump
+@_spi(Internals) @testable import CombineNavigation
 
 #if canImport(UIKit) && !os(watchOS)
 import SwiftUI
@@ -20,54 +21,88 @@ final class RoutingControllerTests: XCTestCase {
 		let navigation = UINavigationController(rootViewController: root)
 		navigation.loadViewIfNeeded()
 		root.loadViewIfNeeded()
+
 		root.viewModel = viewModel
 
 		withoutNavigationAnimation {
 			XCTAssertEqual(navigation.viewControllers.count, 1)
 
-			root.viewModel.state.root.state.destination = .tree(.init(
-				initialState: .init(destination: .tree(.init(
+			do {
+				var stdout = ""
+				root.combineNavigationRouter.printRoutersGraph(to: &stdout)
+				print(stdout)
+			}
+
+			root.withRoutersGraphDiff {
+				root.viewModel.state.root.state.destination = .tree(.init(
 					initialState: .init(destination: .tree(.init(
-						initialState: .init()
+						initialState: .init(destination: .tree(.init(
+							initialState: .init()
+						)))
 					)))
-				)))
-			))
+				))
+			}
 			XCTAssertEqual(navigation.viewControllers.count, 4)
 
-			root.viewModel.state.path.append(.tree(.init(
-				initialState: .init()
-			)))
+			root.withRoutersGraphDiff {
+				root.viewModel.state.path.append(.tree(.init(
+					initialState: .init()
+				)))
+			}
 			XCTAssertEqual(navigation.viewControllers.count, 5)
 
 			navigation.popViewController()
 			XCTAssertEqual(navigation.viewControllers.count, 4)
 			XCTAssertEqual(root.viewModel.state.path.count, 0)
+
 			XCTAssertNotNil(
 				root.viewModel.state.root
 					.state.destination?.tree?
 					.state.destination?.tree?
-					.state.destination?.tree
+					.state.destination
 			)
 
-			root.viewModel.state.root
-				.state.destination?.tree?
-				.state.destination = .tree(.init(initialState: .init()))
+			root.withRoutersGraphDiff {
+				navigation.popViewController()
+			}
+
+			XCTAssertNotNil(
+				root.viewModel.state.root
+					.state.destination?.tree?
+					.state.destination
+			)
 
 			XCTAssertNil(
 				root.viewModel.state.root
 					.state.destination?.tree?
 					.state.destination?.tree?
-					.state.destination?.tree
+					.state.destination
 			)
 
 			XCTAssertEqual(navigation.viewControllers.count, 3)
 
-			navigation.popViewController()
+			root.viewModel.state.root.state.destination = .tree(.init(initialState: .init()))
+
+			XCTAssertNotNil(
+				root.viewModel.state.root
+					.state.destination
+			)
+
 			XCTAssertNil(
 				root.viewModel.state.root
 					.state.destination?.tree?
-					.state.destination?.tree
+					.state.destination
 			)
+
+			XCTAssertEqual(navigation.viewControllers.count, 2)
+
+			navigation.popViewController()
+
+			XCTAssertNil(
+				root.viewModel.state.root.state.destination
+			)
+
+			XCTAssertEqual(navigation.viewControllers.count, 1)
 		}
 	}
 }
@@ -172,7 +207,7 @@ fileprivate class TreeViewController: CocoaViewController {
 		.store(in: &cancellables)
 
 		navigationDestination(
-			publisher.map(\.destination?.tag).removeDuplicates(),
+			publisher.map(\.destination),
 			switch: { destinations, route in
 				switch route {
 				case .tree:
@@ -186,6 +221,10 @@ fileprivate class TreeViewController: CocoaViewController {
 			}
 		)
 		.store(in: &cancellables)
+	}
+
+	deinit {
+		print("deinit vc", objectID)
 	}
 }
 
@@ -270,7 +309,7 @@ fileprivate class StackViewController: CocoaViewController {
 
 	override func viewDidLoad() {
 		super.viewDidLoad()
-		addRoutedChild(contentController)
+		addChild(contentController)
 		view.addSubview(contentController.view)
 		contentController.view.frame = view.bounds
 		contentController.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
@@ -304,7 +343,7 @@ fileprivate class StackViewController: CocoaViewController {
 		.store(in: &cancellables)
 
 		navigationStack(
-			publisher.map(\.path).map { $0.map(\.tag) }.removeDuplicates(),
+			publisher.map(\.path).map { $0.map(\.tag) },
 			switch: { destinations, route in
 				switch route {
 				case .tree:
@@ -320,5 +359,18 @@ fileprivate class StackViewController: CocoaViewController {
 		.store(in: &cancellables)
 	}
 
+	deinit {
+		print("deinit vc", objectID)
+	}
+}
+
+extension UIViewController {
+	func withRoutersGraphDiff(perform operation: () -> Void) {
+		var output = (old: "", new: "")
+		combineNavigationRouter.printRoutersGraph(to: &output.old)
+		operation()
+		combineNavigationRouter.printRoutersGraph(to: &output.new)
+		print(diff(output.old, output.new) ?? "-")
+	}
 }
 #endif
