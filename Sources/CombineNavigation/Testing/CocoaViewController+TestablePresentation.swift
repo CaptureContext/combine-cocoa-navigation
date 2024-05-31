@@ -13,6 +13,7 @@ import CocoaAliases
 /// > for testing live applications
 /// > but fixes unexpected UIKit behaviors
 /// > specifically for the needs of this package
+@_spi(Testables)
 open class AppleSpaghettiCodeTestableController: CocoaViewController {
 	private weak var _presentingViewController: CocoaViewController?
 	override open var presentingViewController: CocoaViewController? {

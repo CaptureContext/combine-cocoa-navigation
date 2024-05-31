@@ -32,32 +32,33 @@ extension CombineNavigationRouter {
 		)
 	}
 
-	/// Subscribes on publisher of navigation stack state
-	public func navigationStack<
-		P: Publisher,
-		C: Collection & Equatable,
-		Route
-	>(
-		_ publisher: P,
-		switch controller: @escaping (Route, C.Index) -> CocoaViewController,
-		onPop: @escaping ([C.Index]) -> Void
-	) -> Cancellable where
-		P.Output == C,
-		P.Failure == Never,
-		C.Element == Route,
-		C.Index: Hashable,
-		C.Indices: Equatable
-	{
-		navigationStack(
-			publisher,
-			ids: \.indices,
-			route: { $0[$1] },
-			switch: { route, id in
-				controller(route, id)
-			},
-			onPop: onPop
-		)
-	}
+//	/// Subscribes on publisher of navigation stack state
+//	public func navigationStack<
+//		P: Publisher,
+//		C: Collection & Equatable,
+//		Route
+//	>(
+//		_ publisher: P,
+//		switch controller: @escaping (Route, C.Index) -> CocoaViewController,
+//		onPop: @escaping ([C.Index]) -> Void
+//	) -> Cancellable where
+//		P.Output == C,
+//		P.Failure == Never,
+//		C.Element == Route,
+//		C.Index: Hashable,
+//		C.Indices: Equatable
+//	{
+//		navigationStack(
+//			publisher,
+//			ids: \.indices,
+//			route: { $0[$1] },
+//			switch: { route, id in
+//				controller(route, id)
+//			},
+//			onPop: onPop
+//		)
+//	}
+
 	/// Subscribes on publisher of navigation stack state
 	public func navigationStack<
 		P: Publisher,
@@ -83,7 +84,7 @@ extension CombineNavigationRouter {
 						let destination = destination(route)
 						return _self.makeNavigationRoute(
 							for: id,
-							controller: { destination._initControllerIfNeeded(for: id) },
+							controller: { destination._initControllerIfNeeded(for: id, preconfigure: $0) },
 							invalidationHandler: { destination._invalidate(id) }
 						)
 					}
@@ -93,35 +94,35 @@ extension CombineNavigationRouter {
 		)
 	}
 
-	/// Subscribes on publisher of navigation stack state
-	public func navigationStack<
-		P: Publisher,
-		Stack,
-		IDs: Collection & Equatable,
-		Route
-	>(
-		_ publisher: P,
-		ids: @escaping (Stack) -> IDs,
-		route: @escaping (Stack, IDs.Element) -> Route?,
-		switch controller: @escaping (Route, IDs.Element) -> CocoaViewController,
-		onPop: @escaping ([IDs.Element]) -> Void
-	) -> Cancellable where
-		P.Output == Stack,
-		P.Failure == Never,
-		IDs.Element: Hashable
-	{
-		_navigationStack(
-			publisher: publisher.removeDuplicates(by: { ids($0) == ids($1) }),
-			routes: capture(orReturn: []) { _self, stack in
-				ids(stack).compactMap { id in
-					route(stack, id).map { route in
-						_self.makeNavigationRoute(for: id) { controller(route, id) }
-					}
-				}
-			},
-			onPop: onPop
-		)
-	}
+//	/// Subscribes on publisher of navigation stack state
+//	public func navigationStack<
+//		P: Publisher,
+//		Stack,
+//		IDs: Collection & Equatable,
+//		Route
+//	>(
+//		_ publisher: P,
+//		ids: @escaping (Stack) -> IDs,
+//		route: @escaping (Stack, IDs.Element) -> Route?,
+//		switch controller: @escaping (Route, IDs.Element) -> CocoaViewController,
+//		onPop: @escaping ([IDs.Element]) -> Void
+//	) -> Cancellable where
+//		P.Output == Stack,
+//		P.Failure == Never,
+//		IDs.Element: Hashable
+//	{
+//		_navigationStack(
+//			publisher: publisher.removeDuplicates(by: { ids($0) == ids($1) }),
+//			routes: capture(orReturn: []) { _self, stack in
+//				ids(stack).compactMap { id in
+//					route(stack, id).map { route in
+//						_self.makeNavigationRoute(for: id) { controller(route, id) }
+//					}
+//				}
+//			},
+//			onPop: onPop
+//		)
+//	}
 
 	/// Subscribes on publisher of navigation stack state
 	public func _navigationStack<

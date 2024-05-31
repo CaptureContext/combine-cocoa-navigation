@@ -2,6 +2,8 @@ import XCTest
 import CocoaAliases
 import Capture
 import Combine
+
+@_spi(Testables)
 @testable import CombineNavigation
 
 #if canImport(UIKit) && !os(watchOS)

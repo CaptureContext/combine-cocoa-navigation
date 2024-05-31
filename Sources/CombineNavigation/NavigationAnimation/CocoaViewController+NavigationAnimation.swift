@@ -4,7 +4,8 @@ import CocoaAliases
 extension UINavigationController {
 	@discardableResult
 	public func popViewController() -> CocoaViewController? {
-		popViewController(animated: NavigationAnimation.$isEnabled.get())
+		print(#function, "animated:", NavigationAnimation.$isEnabled.get())
+		return popViewController(animated: NavigationAnimation.$isEnabled.get())
 	}
 
 	@discardableResult
@@ -22,6 +23,7 @@ extension UINavigationController {
 	public func setViewControllers(
 		_ controllers: [CocoaViewController]
 	) {
+		print(#function, "animated:", NavigationAnimation.$isEnabled.get())
 		setViewControllers(controllers, animated: NavigationAnimation.$isEnabled.get())
 	}
 

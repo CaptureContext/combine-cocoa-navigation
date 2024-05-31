@@ -4,9 +4,11 @@ import CocoaAliases
 import Combine
 import FoundationExtensionsMacros
 
-public protocol _TreeDestinationProtocol: AnyObject {
+public protocol _TreeDestinationProtocol: _DestinationProtocol {
 	@_spi(Internals)
-	func _initControllerIfNeeded() -> CocoaViewController
+	func _initControllerIfNeeded(
+		preconfigure: (CocoaViewController) -> Void
+	) -> CocoaViewController
 
 	@_spi(Internals)
 	func _invalidate()
@@ -14,8 +16,8 @@ public protocol _TreeDestinationProtocol: AnyObject {
 
 /// Wrapper for creating and accessing managed navigation destination controller
 ///
-/// > ⚠️ Sublasses or typealiases must contain "TreeDestination" in their name
-/// > to be processed by `@RoutingController` macro
+/// - Warning: Sublasses or typealiases must contain "TreeDestination" in their name
+/// to be processed by `@RoutingController` macro
 @propertyWrapper
 open class TreeDestination<Controller: CocoaViewController>:
 	Weakifiable,
@@ -79,8 +81,7 @@ open class TreeDestination<Controller: CocoaViewController>:
 	/// and override it's `initController` class method, you can find an example in tests.
 	///
 	/// - Parameters:
-	///   - initControllerOverride:
-	///   This override has the highest priority when creating a new controller, default one is just `Controller()`
+	///   - initControllerOverride: This override has the highest priority when creating a new controller, default one is just `Controller()`
 	///   **which can lead to crashes if controller doesn't have an empty init**.
 	///   *Consider using `DestinationInitializableControllerProtocol` if possible instead of this parameter*
 	@inlinable
@@ -91,8 +92,16 @@ open class TreeDestination<Controller: CocoaViewController>:
 
 	@_spi(Internals)
 	@inlinable
-	public func _initControllerIfNeeded() -> CocoaViewController {
-		self.callAsFunction()
+	public func _initControllerIfNeeded(preconfigure: (CocoaViewController) -> Void) -> CocoaViewController {
+		let controller = wrappedValue.map { preconfigure($0); return $0 } ?? {
+				let controller = _initControllerOverride?() ?? Self.initController()
+				preconfigure(controller)
+				configureController(controller)
+				_configuration?(controller)
+				self._controller = controller
+				return controller
+			}()
+			return controller
 	}
 
 	@_spi(Internals)

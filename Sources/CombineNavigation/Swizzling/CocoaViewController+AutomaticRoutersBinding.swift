@@ -1,7 +1,7 @@
 #if canImport(UIKit) && !os(watchOS)
 import Capture
 import CocoaAliases
-import Combine
+import CombineExtensions
 import FoundationExtensionsMacros
 
 extension CocoaViewController {
@@ -27,6 +27,10 @@ extension CocoaViewController {
 	@objc dynamic func __swizzledRemoveFromParent() {
 		__swizzledRemoveFromParent()
 		combineNavigationRouter.removeFromParent()
+	}
+
+	@objc dynamic func __swizzledDidMoveToParent() {
+		__swizzledDidMoveToParent()
 	}
 }
 #endif

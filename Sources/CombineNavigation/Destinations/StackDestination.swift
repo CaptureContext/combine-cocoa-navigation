@@ -4,11 +4,14 @@ import CocoaAliases
 import Combine
 import FoundationExtensionsMacros
 
-public protocol _StackDestinationProtocol<DestinationID>: AnyObject {
+public protocol _StackDestinationProtocol<DestinationID>: _DestinationProtocol {
 	associatedtype DestinationID: Hashable
 
 	@_spi(Internals)
-	func _initControllerIfNeeded(for id: DestinationID) -> CocoaViewController
+	func _initControllerIfNeeded(
+		for id: DestinationID,
+		preconfigure: (CocoaViewController) -> Void
+	) -> CocoaViewController
 
 	@_spi(Internals)
 	func _invalidate(_ id: DestinationID)
@@ -16,8 +19,8 @@ public protocol _StackDestinationProtocol<DestinationID>: AnyObject {
 
 /// Wrapper for creating and accessing managed navigation stack controllers
 ///
-/// > ⚠️ Sublasses or typealiases must contain "StackDestination" in their name
-/// > to be processed by `@RoutingController` macro
+/// - Warning: Sublasses or typealiases must contain "StackDestination" in their name
+/// to be processed by `@RoutingController` macro
 @propertyWrapper
 open class StackDestination<
 	DestinationID: Hashable,
@@ -90,8 +93,7 @@ open class StackDestination<
 	/// and override it's `initController` class method, you can find an example in tests.
 	///
 	/// - Parameters:
-	///   - initControllerOverride:
-	///   This override has the highest priority when creating a new controller, default one is just `Controller()`
+	///   - initControllerOverride: This override has the highest priority when creating a new controller, default one is just `Controller()`
 	///   **which can lead to crashes if controller doesn't have an empty init**.
 	///   *Consider using `DestinationInitializableControllerProtocol` if possible instead of this parameter*
 	@inlinable
@@ -103,9 +105,19 @@ open class StackDestination<
 	@_spi(Internals)
 	@inlinable
 	public func _initControllerIfNeeded(
-		for id: DestinationID
+		for id: DestinationID,
+		preconfigure: (CocoaViewController) -> Void
 	) -> CocoaViewController {
-		return self[id]
+		let controller = wrappedValue[id] ?? {
+			let controller = _initControllerOverride?(id) ?? Self.initController(for: id)
+			preconfigure(controller)
+			_controllers[id] = controller
+			configureController(controller, for: id)
+			_configuration?(controller, id)
+			return controller
+		}()
+
+		return controller
 	}
 
 	@_spi(Internals)

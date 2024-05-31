@@ -16,7 +16,7 @@ extension RoutingController {
 		Route
 	>(
 		_ publisher: P,
-		switch destination: @escaping (Destinations, Route) -> any _StackDestinationProtocol<C.Index>,
+		switch destination: @escaping (StackDestinations, Route) -> any _StackDestinationProtocol<C.Index>,
 		onPop: @escaping ([C.Index]) -> Void
 	) -> Cancellable where
 		P.Output == C,
@@ -42,7 +42,7 @@ extension RoutingController {
 		_ publisher: P,
 		ids: @escaping (Stack) -> IDs,
 		route: @escaping (Stack, IDs.Element) -> Route?,
-		switch destination: @escaping (Destinations, Route) -> any _StackDestinationProtocol<IDs.Element>,
+		switch destination: @escaping (StackDestinations, Route) -> any _StackDestinationProtocol<IDs.Element>,
 		onPop: @escaping ([IDs.Element]) -> Void
 	) -> Cancellable where
 		P.Output == Stack,
@@ -84,7 +84,7 @@ extension RoutingController {
 	public func navigationDestination<P: Publisher, Route>(
 		_ publisher: P,
 		removeDuplicates isDuplicate: @escaping (P.Output, P.Output) -> Bool = Optional.__compareEnumTagsEqual,
-		switch destination: @escaping (Destinations, Route) -> _TreeDestinationProtocol,
+		switch destination: @escaping (TreeDestinations, Route) -> _TreeDestinationProtocol,
 		onPop: @escaping () -> Void
 	) -> AnyCancellable where
 		P.Output == Route?,
@@ -122,7 +122,7 @@ extension RoutingController {
 	public func presentationDestination<P: Publisher, Route>(
 		_ publisher: P,
 		removeDuplicates isDuplicate: @escaping (P.Output, P.Output) -> Bool = Optional.__compareEnumTagsEqual,
-		switch destination: @escaping (Destinations, Route) -> _PresentationDestinationProtocol,
+		switch destination: @escaping (PresentationDestinations, Route) -> _PresentationDestinationProtocol,
 		onDismiss: @escaping () -> Void
 	) -> AnyCancellable where
 		P.Output == Route?,
@@ -142,9 +142,9 @@ extension RoutingController {
 extension RoutingController {
 	@usableFromInline
 	internal func destinations<Route>(
-		_ mapping: @escaping (Destinations, Route) -> _TreeDestinationProtocol
+		_ mapping: @escaping (TreeDestinations, Route) -> _TreeDestinationProtocol
 	) -> (Route) -> _TreeDestinationProtocol {
-		let destinations = _makeDestinations()
+		let destinations = _makeTreeDestinations()
 		return { route in
 			mapping(destinations, route)
 		}
@@ -152,9 +152,9 @@ extension RoutingController {
 
 	@usableFromInline
 	internal func destinations<Route>(
-		_ mapping: @escaping (Destinations, Route) -> _PresentationDestinationProtocol
+		_ mapping: @escaping (PresentationDestinations, Route) -> _PresentationDestinationProtocol
 	) -> (Route) -> _PresentationDestinationProtocol {
-		let destinations = _makeDestinations()
+		let destinations = _makePresentationDestinations()
 		return { route in
 			mapping(destinations, route)
 		}
@@ -162,9 +162,9 @@ extension RoutingController {
 
 	@usableFromInline
 	internal func destinations<Route, DestinationID: Hashable>(
-		_ mapping: @escaping (Destinations, Route) -> any _StackDestinationProtocol<DestinationID>
+		_ mapping: @escaping (StackDestinations, Route) -> any _StackDestinationProtocol<DestinationID>
 	) -> (Route) -> any _StackDestinationProtocol<DestinationID> {
-		let destinations = _makeDestinations()
+		let destinations = _makeStackDestinations()
 		return { route in
 			mapping(destinations, route)
 		}

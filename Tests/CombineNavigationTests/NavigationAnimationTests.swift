@@ -55,6 +55,42 @@ final class NavigationAnimationTests: XCTestCase {
 		 }
 	 }
 
+	func testWithAnimationFunctions() {
+		XCTAssertTrue(NavigationAnimation.$isEnabled.get())
+
+		withoutNavigationAnimation {
+			XCTAssertFalse(NavigationAnimation.$isEnabled.get())
+
+			withNavigationAnimation {
+				XCTAssertTrue(NavigationAnimation.$isEnabled.get())
+			}
+			
+			XCTAssertFalse(NavigationAnimation.$isEnabled.get())
+		}
+
+		withNavigationAnimation {
+			XCTAssertTrue(NavigationAnimation.$isEnabled.get())
+
+			withoutNavigationAnimation {
+				XCTAssertFalse(NavigationAnimation.$isEnabled.get())
+			}
+
+			XCTAssertTrue(NavigationAnimation.$isEnabled.get())
+		}
+
+		withNavigationAnimation(false) {
+			XCTAssertFalse(NavigationAnimation.$isEnabled.get())
+
+			withNavigationAnimation(true) {
+				XCTAssertTrue(NavigationAnimation.$isEnabled.get())
+			}
+
+			XCTAssertFalse(NavigationAnimation.$isEnabled.get())
+		}
+
+		XCTAssertTrue(NavigationAnimation.$isEnabled.get())
+	}
+
 	func testAnimationWithTaskDelayUIKitOnly() {
 		let rootController = CocoaViewController()
 		let navigationController = UINavigationController(rootViewController: rootController)

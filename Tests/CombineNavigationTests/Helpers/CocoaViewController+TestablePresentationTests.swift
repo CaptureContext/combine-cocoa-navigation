@@ -1,6 +1,6 @@
 import XCTest
 import CocoaAliases
-import CombineNavigation
+@_spi(Testables) import CombineNavigation
 
 #if canImport(UIKit) && !os(watchOS)
 final class AppleSpaghettiCodeTestableControllerTests: XCTestCase {

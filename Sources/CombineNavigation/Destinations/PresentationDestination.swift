@@ -4,7 +4,7 @@ import CocoaAliases
 import Combine
 import FoundationExtensionsMacros
 
-public protocol _PresentationDestinationProtocol: AnyObject {
+public protocol _PresentationDestinationProtocol: _DestinationProtocol {
 	@_spi(Internals)
 	func _initControllerForPresentationIfNeeded() -> CocoaViewController
 
@@ -14,8 +14,8 @@ public protocol _PresentationDestinationProtocol: AnyObject {
 
 /// Wrapper for creating and accessing managed navigation destination controller
 ///
-/// > ⚠️ Sublasses or typealiases must contain "PresentationDestination" in their name
-/// > to be processed by `@RoutingController` macro
+/// - Warning: Sublasses or typealiases must contain "PresentationDestination" in their name
+/// to be processed by `@RoutingController` macro
 @propertyWrapper
 open class PresentationDestination<Controller: CocoaViewController>:
 	Weakifiable,

@@ -3,6 +3,8 @@ import CocoaAliases
 import Capture
 import Combine
 import FoundationExtensionsMacros
+
+@_spi(Testables)
 @testable import CombineNavigation
 
 #if canImport(UIKit) && !os(watchOS)

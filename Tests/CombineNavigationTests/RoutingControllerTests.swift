@@ -3,6 +3,7 @@ import CocoaAliases
 import Capture
 import Combine
 import CustomDump
+import CombineExtensions
 @_spi(Internals) @testable import CombineNavigation
 
 #if canImport(UIKit) && !os(watchOS)
@@ -15,16 +16,70 @@ final class RoutingControllerTests: XCTestCase {
 		CombineNavigation.bootstrap()
 	}
 
-	func testMain() {
-		let root = StackViewController()
-		let viewModel = StackViewModel(initialState: .init())
-		let navigation = UINavigationController(rootViewController: root)
-		navigation.loadViewIfNeeded()
-		root.loadViewIfNeeded()
-
-		root.viewModel = viewModel
-
+	func testDeinit() {
 		withoutNavigationAnimation {
+			let root = TreeViewController()
+			let viewModel = TreeViewModel()
+			let navigation = UINavigationController(rootViewController: root)
+			var expectations: [XCTestExpectation] = []
+
+			root.viewModel = viewModel
+
+			// Ensure unreferenced objects are deallocated
+			// before performing assertion
+			autoreleasepool {
+				do {
+					let expectation = expectation(description: "plain")
+					var controller: TreeViewController? = .init()
+					controller?.onDeinit = expectation.fulfill
+					expectations.append(expectation)
+					controller = nil
+				}
+
+				do {
+					let expectation = expectation(description: "tree.stack")
+					viewModel.state.destination = .stack()
+					root.stackController!.onDeinit = expectation.fulfill
+					expectations.append(expectation)
+				}
+
+				do {
+					let expectation = expectation(description: "tree.stack.path")
+					viewModel.state.destination!.stack!.state.path.append(.tree())
+					root.stackController?.treeControllers[
+						root.stackController!.treeControllers.keys.first!
+					]?.onDeinit = expectation.fulfill
+					expectations.append(expectation)
+				}
+
+				do {
+					navigation.popViewController()
+					navigation.popViewController()
+				}
+			}
+
+			XCTAssertEqual(root.treeController, nil)
+			wait(for: expectations, timeout: 1)
+		}
+	}
+
+	func testLive() {
+		customDump(NavigationStateNode.example)
+		NavigationStateNode.example.print()
+		customDump(collectNavigationStack(from: .example).map { $0.uuidString.lowercased() })
+		customDump(collectPresentationStack(from: .example).map { $0.uuidString.lowercased() })
+		print()
+		print()
+		print()
+		withoutNavigationAnimation {
+			let root = StackViewController()
+			let viewModel = StackViewModel()
+			let navigation = UINavigationController(rootViewController: root)
+			navigation.loadViewIfNeeded()
+			root.loadViewIfNeeded()
+
+			root.viewModel = viewModel
+
 			XCTAssertEqual(navigation.viewControllers.count, 1)
 
 			do {
@@ -34,7 +89,7 @@ final class RoutingControllerTests: XCTestCase {
 			}
 
 			root.withRoutersGraphDiff {
-				root.viewModel.state.root.state.destination = .tree(.init(
+				root.viewModel?.state.root.state.destination = .tree(.init(
 					initialState: .init(destination: .tree(.init(
 						initialState: .init(destination: .tree(.init(
 							initialState: .init()
@@ -42,77 +97,118 @@ final class RoutingControllerTests: XCTestCase {
 					)))
 				))
 			}
+
+			print("assert")
 			XCTAssertEqual(navigation.viewControllers.count, 4)
 
 			root.withRoutersGraphDiff {
-				root.viewModel.state.path.append(.tree(.init(
+				root.viewModel?.state.path.append(.tree(.init(
 					initialState: .init()
 				)))
 			}
+
 			XCTAssertEqual(navigation.viewControllers.count, 5)
+		}
+	}
 
-			navigation.popViewController()
-			XCTAssertEqual(navigation.viewControllers.count, 4)
-			XCTAssertEqual(root.viewModel.state.path.count, 0)
+	func testMain() {
+		let log: () -> Void = {
+			var count = 0
+			return { print("\n::\(count)"); count += 1 }
+		}()
 
-			XCTAssertNotNil(
-				root.viewModel.state.root
-					.state.destination?.tree?
-					.state.destination?.tree?
-					.state.destination
-			)
+		withoutNavigationAnimation {
+			let root = StackViewController()
+			let navigation = UINavigationController(rootViewController: root)
 
-			root.withRoutersGraphDiff {
-				navigation.popViewController()
+			do { log() // deeplinking
+				root.viewModel = StackViewModel(initialState: .init(
+					root: .init(initialState: .init(
+						destination: .tree()
+					))
+				))
+
+				XCTAssertEqual(navigation.viewControllers.count, 2)
 			}
 
-			XCTAssertNotNil(
-				root.viewModel.state.root
-					.state.destination?.tree?
-					.state.destination
-			)
+			do { log() // navigation tree: batch set
+				root.withRoutersGraphDiff {
+					root.viewModel?.state.root.state.destination?.tree?.state.destination = .tree(.init(
+						initialState: .init(destination: .tree()
+					)))
+				}
 
-			XCTAssertNil(
-				root.viewModel.state.root
-					.state.destination?.tree?
-					.state.destination?.tree?
-					.state.destination
-			)
+				XCTAssertEqual(navigation.viewControllers.count, 4)
+			}
 
-			XCTAssertEqual(navigation.viewControllers.count, 3)
+			do { log() // navigation tree: pop
+				root.withRoutersGraphDiff {
+					navigation.popViewController()
+				}
 
-			root.viewModel.state.root.state.destination = .tree(.init(initialState: .init()))
+				XCTAssertEqual(navigation.viewControllers.count, 3)
 
-			XCTAssertNotNil(
-				root.viewModel.state.root
-					.state.destination
-			)
+				XCTAssertNotNil(
+					root.contentController?
+						.treeController?
+						.treeController
+				)
 
-			XCTAssertNil(
-				root.viewModel.state.root
-					.state.destination?.tree?
-					.state.destination
-			)
+				XCTAssertNotNil(
+					root.viewModel?.state.root
+						.state.destination?.tree?
+						.state.destination
+				)
 
-			XCTAssertEqual(navigation.viewControllers.count, 2)
+				XCTAssertNil(
+					root.viewModel?.state.root
+						.state.destination?.tree?
+						.state.destination?.tree?
+						.state.destination
+				)
 
-			navigation.popViewController()
+				// Destination should be invalidated
+				// Controller should be nil
+				XCTAssertNil(
+					root.contentController?
+						.treeController?
+						.treeController?
+						.treeController
+				)
+			}
 
-			XCTAssertNil(
-				root.viewModel.state.root.state.destination
-			)
+			do { log() // stack navigation
+				root.withRoutersGraphDiff {
+					root.viewModel?.state.path.append(.tree())
+				}
 
-			XCTAssertEqual(navigation.viewControllers.count, 1)
+				XCTAssertEqual(navigation.viewControllers.count, 4)
+
+				root.withRoutersGraphDiff {
+					navigation.popViewController()
+				}
+
+				XCTAssertEqual(navigation.viewControllers.count, 3)
+
+				XCTAssertEqual(root.viewModel?.state.path.count, 0)
+			}
+
+			do { log() // navigation tree: reset
+				root.withRoutersGraphDiff {
+					root.viewModel?.state.root.state.destination = nil
+				}
+
+				XCTAssertEqual(navigation.viewControllers.count, 1)
+			}
 		}
 	}
 }
 
-fileprivate class TreeViewModel {
+fileprivate class TreeViewModel: ViewModelProtocol {
 	struct State {
 		enum Destination {
-			/// UUID represents some state
-			case tree(TreeViewModel)
-			case stack(StackViewModel)
+			case tree(TreeViewModel = .init())
+			case stack(StackViewModel = .init())
 
 			enum Tag: Hashable {
 				case tree
@@ -149,7 +245,7 @@ fileprivate class TreeViewModel {
 		var destination: Destination?
 	}
 
-	init(initialState: State) {
+	init(initialState: State = .init()) {
 		self._state = .init(initialState)
 	}
 
@@ -165,16 +261,7 @@ fileprivate class TreeViewModel {
 }
 
 @RoutingController
-fileprivate class TreeViewController: CocoaViewController {
-	private var cancellables: Set<AnyCancellable> = []
-
-	var viewModel: TreeViewModel! {
-		didSet {
-			cancellables = []
-			guard let viewModel else { return }
-			bind(viewModel.publisher)
-		}
-	}
+fileprivate class TreeViewController: MVVMController<TreeViewModel> {
 
 	@TreeDestination
 	var treeController: TreeViewController?
@@ -182,7 +269,9 @@ fileprivate class TreeViewController: CocoaViewController {
 	@TreeDestination
 	var stackController: StackViewController?
 
-	func scope(_ viewModel: TreeViewModel?) {
+	override func scope(_ viewModel: TreeViewModel?) {
+		super.scope(viewModel)
+
 		$treeController.setConfiguration { controller in
 			controller.viewModel = viewModel?.state.destination?.tree
 		}
@@ -192,19 +281,10 @@ fileprivate class TreeViewController: CocoaViewController {
 		}
 	}
 
-	func bind(
-		_ publisher: some Publisher<TreeViewModel.State, Never>
+	override func bind(
+		_ publisher: TreeViewModel.StatePublisher
 	) {
-		publisher.map(\.destination).removeDuplicates { lhs, rhs in
-			lhs.flatMap(\.tree).map(ObjectIdentifier.init)
-			== rhs.flatMap(\.tree).map(ObjectIdentifier.init)
-			&&
-			lhs.flatMap(\.stack).map(ObjectIdentifier.init)
-			== rhs.flatMap(\.stack).map(ObjectIdentifier.init)
-		}.sink(receiveValue: capture { _self, destination in
-			self.scope(_self.viewModel)
-		})
-		.store(in: &cancellables)
+		super.bind(publisher)
 
 		navigationDestination(
 			publisher.map(\.destination),
@@ -216,26 +296,22 @@ fileprivate class TreeViewController: CocoaViewController {
 					destinations.$stackController
 				}
 			},
-			onPop: capture { _self in
-				_self.viewModel.state.destination = .none
+			onPop: { [weak self] in
+				print(self?.objectID as Any, "onPop")
+				self?.viewModel?.state.destination = .none
 			}
 		)
 		.store(in: &cancellables)
-	}
-
-	deinit {
-		print("deinit vc", objectID)
 	}
 }
 
 // MARK: - Stack
 
-fileprivate class StackViewModel {
+fileprivate class StackViewModel: ViewModelProtocol {
 	struct State {
 		enum Destination {
-			/// UUID represents some state
-			case tree(TreeViewModel)
-			case stack(StackViewModel)
+			case tree(TreeViewModel = .init())
+			case stack(StackViewModel = .init())
 
 			enum Tag: Hashable {
 				case tree
@@ -272,7 +348,7 @@ fileprivate class StackViewModel {
 		var path: [Destination] = []
 	}
 
-	init(initialState: State) {
+	init(initialState: State = .init()) {
 		self._state = .init(initialState)
 	}
 
@@ -288,18 +364,9 @@ fileprivate class StackViewModel {
 }
 
 @RoutingController
-fileprivate class StackViewController: CocoaViewController {
-	private var cancellables: Set<AnyCancellable> = []
-
-	var viewModel: StackViewModel! {
-		didSet {
-			cancellables = []
-			guard let viewModel else { return }
-			bind(viewModel.publisher)
-		}
-	}
-
-	var contentController: TreeViewController = .init()
+fileprivate class StackViewController: MVVMController<StackViewModel> {
+	@DerivedDestination
+	var contentController: TreeViewController?
 
 	@StackDestination
 	var treeControllers: [Int: TreeViewController]
@@ -309,15 +376,21 @@ fileprivate class StackViewController: CocoaViewController {
 
 	override func viewDidLoad() {
 		super.viewDidLoad()
-		addChild(contentController)
-		view.addSubview(contentController.view)
-		contentController.view.frame = view.bounds
-		contentController.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-		contentController.didMove(toParent: self)
+		addChild(_contentController())
+		contentController.map { controller in
+			view.addSubview(controller.view)
+			controller.view.frame = view.bounds
+			controller.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+			controller.didMove(toParent: self)
+		}
 	}
 
-	func scope(_ viewModel: StackViewModel?) {
-		contentController.viewModel = viewModel?.state.root
+	override func scope(_ viewModel: StackViewModel?) {
+		super.scope(viewModel)
+
+		$contentController.setConfiguration { controller in
+			controller.viewModel = viewModel?.state.root
+		}
 
 		$treeControllers.setConfiguration { controller, id in
 			controller.viewModel = viewModel?.state.path[safe: id]?.tree
@@ -328,19 +401,10 @@ fileprivate class StackViewController: CocoaViewController {
 		}
 	}
 
-	func bind(
-		_ publisher: some Publisher<StackViewModel.State, Never>
+	override func bind(
+		_ publisher: StackViewModel.StatePublisher
 	) {
-		publisher.map(\.path).removeDuplicates { lhs, rhs in
-			lhs.compactMap(\.tree).map(ObjectIdentifier.init)
-			== rhs.compactMap(\.tree).map(ObjectIdentifier.init)
-			&&
-			lhs.compactMap(\.stack).map(ObjectIdentifier.init)
-			== rhs.compactMap(\.stack).map(ObjectIdentifier.init)
-		}.sink(receiveValue: capture { _self, destination in
-			self.scope(_self.viewModel)
-		})
-		.store(in: &cancellables)
+		super.bind(publisher)
 
 		navigationStack(
 			publisher.map(\.path).map { $0.map(\.tag) },
@@ -353,14 +417,10 @@ fileprivate class StackViewController: CocoaViewController {
 				}
 			},
 			onPop: capture { _self, indices in
-				_self.viewModel.state.path.remove(atOffsets: IndexSet(indices))
+				_self.viewModel?.state.path.remove(atOffsets: IndexSet(indices))
 			}
 		)
 		.store(in: &cancellables)
-	}
-
-	deinit {
-		print("deinit vc", objectID)
 	}
 }
 
@@ -373,4 +433,40 @@ extension UIViewController {
 		print(diff(output.old, output.new) ?? "-")
 	}
 }
+
+protocol ViewModelProtocol {
+	associatedtype State
+	associatedtype StatePublisher: Publisher where StatePublisher.Output == State
+
+	var state: State { get set }
+	var publisher: StatePublisher { get }
+}
+
+class MVVMController<ViewModel: ViewModelProtocol>: CocoaViewController {
+	var cancellables: Set<AnyCancellable> = []
+	var onDeinit: (() -> Void)?
+
+	var viewModel: ViewModel? {
+		didSet {
+			cancellables = []
+			scope(viewModel)
+			viewModel.map(\.publisher).map(bind)
+		}
+	}
+
+	open func scope(_ viewModel: ViewModel?) {
+		print(ObjectIdentifier(self), #function)
+	}
+
+	open func bind(_ publisher: ViewModel.StatePublisher) {
+		print(ObjectIdentifier(self), #function)
+	}
+
+	deinit {
+		print("deinit vc", objectID)
+		onDeinit?()
+	}
+}
+
+
 #endif

@@ -25,7 +25,7 @@ public class __EnvironmentalContainerAccessor<Content>: DynamicProperty {
 	private var _wrappedValue: __HostingControllerEnvironmentalContainer
 
 	public var wrappedValue: Content? {
-		__wrappedValue._isPresent ? (_wrappedValue.content as? Content)  : nil
+		__wrappedValue._isPresent ? (_wrappedValue.content as? Content) : nil
 	}
 
 	public init() {}

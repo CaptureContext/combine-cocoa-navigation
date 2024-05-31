@@ -91,7 +91,7 @@ final class RoutingControllerStackTests: XCTestCase {
 			viewModel.state.value.path = [.feedback(), .feedback(), .orderDetail(), .feedback(), .orderDetail()]
 			XCTAssertEqual(navigationController.viewControllers.count, 6)
 
-			let destinations = controller._makeDestinations()
+			let destinations = controller._makeStackDestinations()
 
 			XCTAssert(zip(navigationController.viewControllers, [
 				controller,

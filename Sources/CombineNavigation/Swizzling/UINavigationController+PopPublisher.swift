@@ -4,6 +4,15 @@ import CocoaAliases
 import CombineCocoa
 import FoundationExtensionsMacros
 
+extension PublishersProxy where Base: CocoaViewController {
+	var navigationController: some Publisher<UINavigationController?, Never> {
+		base.publisher(for: \Base.parent)
+			.replaceOutput(with: ())
+			.map(base.capture(orReturn: nil, in: \.navigationController))
+			.removeDuplicates(by: ===)
+	}
+}
+
 extension PublishersProxy where Base: UINavigationController {
 	/// Publisher for popped controllers
 	///
@@ -29,6 +38,8 @@ extension UINavigationController {
 
 	fileprivate func handlePop(of controllers: [CocoaViewController]) {
 		handlePop {
+			// self is captured by transitionCoordinator
+			// only for the duration of pop animation
 			self.popSubject.send(controllers)
 			controllers.map(\.combineNavigationRouter).forEach { router in
 				router.removeFromParent()
@@ -165,7 +176,10 @@ extension UINavigationController {
 		}
 
 		__swizzledSetViewControllers(controllers, animated: animated)
-		handlePop(of: poppedControllers)
+
+		if poppedControllers.isNotEmpty {
+			handlePop(of: poppedControllers)
+		}
 	}
 
 }
